@@ -12,6 +12,7 @@
 **MockPilot AI** is a production-quality, full-stack AI interview preparation platform. Practice with adaptive AI-generated questions, get recruiter-grade feedback, analyze your resume against ATS systems, and receive a personalized 7-day improvement roadmap — all in one platform.
 
 </div>
+---
 
 ## Demo video link : https://drive.google.com/file/d/1h5Bj_-T_jc5vM3wyYvq_847WOV8ydxw1/view?usp=sharing
 
