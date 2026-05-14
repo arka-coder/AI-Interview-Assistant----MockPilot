@@ -142,7 +142,7 @@ def render():
         </span>
       </div>
 
-      <p class="hero-sub fade-in">
+      <p class="hero-sub fade-in" style="text-align:center !important;margin-left:auto;margin-right:auto;">
         AI-powered readiness analysis using resume intelligence, communication scoring,
         ATS evaluation, and adaptive AI interviews — all in one platform.
       </p>
