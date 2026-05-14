@@ -1,45 +1,44 @@
 # ================================================================
-# MockPilot AI — Requirements
+# MockPilot AI — Requirements (Streamlit Cloud)
+# ================================================================
+# ⚠️  Streamlit Cloud runs the FRONTEND only.
+#     Deploy the FastAPI backend separately (e.g. Render / Railway)
+#     and set BACKEND_URL in your Streamlit Secrets accordingly.
 # ================================================================
 
-# ── Core Frameworks ─────────────────────────────────────────────
-streamlit==1.35.0
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
 
-# ── AI / LLM ────────────────────────────────────────────────────
+# ── Streamlit Frontend ────────────────────────────────────────────
+streamlit==1.35.0
+
+
+# ── AI / LLM (Groq Cloud API) ────────────────────────────────────
+# Used directly by backend service modules imported in the frontend
 groq==0.9.0
 
-# ── Speech Recognition ──────────────────────────────────────────
-openai-whisper==20231117
-sounddevice==0.4.6
-soundfile==0.12.1
-numpy==1.26.4
 
-# ── Authentication ──────────────────────────────────────────────
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.9
-
-# ── Database ────────────────────────────────────────────────────
-sqlalchemy==2.0.30
-
-# ── Resume Parsing ──────────────────────────────────────────────
+# ── Resume Parsing ────────────────────────────────────────────────
+# frontend/views/resume_analyzer.py imports these directly from
+# backend.services.resume_service (no API hop — runs client-side)
 pdfplumber==0.11.0
-python-docx==1.1.2
 PyMuPDF==1.24.4
+python-docx==1.1.2
 
-# ── HTTP / Async ────────────────────────────────────────────────
-httpx==0.27.0
+
+# ── HTTP Client ───────────────────────────────────────────────────
 requests==2.32.3
-aiofiles==23.2.1
 
-# ── Analytics & Charts ──────────────────────────────────────────
+
+# ── Analytics & Charts ───────────────────────────────────────────
 plotly==5.22.0
 pandas==2.2.2
 
-# ── Utilities ───────────────────────────────────────────────────
-python-dotenv==1.0.1
+
+# ── Validation & Settings ────────────────────────────────────────
 pydantic==2.7.1
 pydantic-settings==2.3.1
+email-validator==2.1.1
+
+
+# ── Utilities ────────────────────────────────────────────────────
+python-dotenv==1.0.1
 python-dateutil==2.9.0
