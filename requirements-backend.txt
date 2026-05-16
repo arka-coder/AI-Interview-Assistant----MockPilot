@@ -15,7 +15,7 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
 
 # ── Database ──────────────────────────────────────────────────────
-sqlalchemy==2.0.30
+sqlalchemy>=2.1.0
 
 # ── Resume Parsing ────────────────────────────────────────────────
 pdfplumber==0.11.0
