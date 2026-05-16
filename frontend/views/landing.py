@@ -206,7 +206,7 @@ def render():
             <strong style="color:#F1F5F9;">Interview Readiness Score</strong> with
             AI hiring insights and a personalized 7-day improvement plan.
           </p>
-          <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1.5rem;">
+          <div style="display:flex;flex-direction:column;gap:0.4rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;">
               <span style="color:#10B981;font-size:0.85rem;">✓</span>
               <span style="color:#94A3B8;font-size:0.82rem;">Resume ATS analysis</span>
@@ -229,9 +229,6 @@ def render():
             </div>
           </div>
         </div>""", unsafe_allow_html=True)
-        if st.button("⚡  Start Quick Readiness Scan", key="mode1_cta", use_container_width=True):
-            st.session_state["page"] = "quick_scan"
-            st.rerun()
 
     with mode2:
         st.markdown("""
@@ -252,7 +249,7 @@ def render():
             Experience a complete AI-powered mock interview with adaptive follow-ups,
             real-time scoring, voice mode, and a comprehensive performance report.
           </p>
-          <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1.5rem;">
+          <div style="display:flex;flex-direction:column;gap:0.4rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;">
               <span style="color:#22D3EE;font-size:0.85rem;">✓</span>
               <span style="color:#94A3B8;font-size:0.82rem;">Adaptive 10-question flow</span>
@@ -275,6 +272,14 @@ def render():
             </div>
           </div>
         </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+    btn1, btn2 = st.columns(2)
+    with btn1:
+        if st.button("⚡  Start Quick Readiness Scan", key="mode1_cta", use_container_width=True):
+            st.session_state["page"] = "quick_scan"
+            st.rerun()
+    with btn2:
         if st.button("🎯  Start Full AI Interview", key="mode2_cta", use_container_width=True):
             st.session_state["page"] = "interview"
             st.rerun()
