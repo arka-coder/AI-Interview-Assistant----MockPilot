@@ -14,7 +14,10 @@
 </div>
 
 ---
-## Demo video link : https://drive.google.com/file/d/1h5Bj_-T_jc5vM3wyYvq_847WOV8ydxw1/view?usp=sharing
+
+## 🎬 Demo
+
+📽️ [Watch the demo video](https://drive.google.com/file/d/1h5Bj_-T_jc5vM3wyYvq_847WOV8ydxw1/view?usp=sharing)
 
 ---
 
@@ -65,14 +68,12 @@ MockPilot AI
     ├── api_client.py           # HTTP client for backend API
     ├── views/
     │   ├── landing.py          # Hero page with feature showcase
-    │   ├── auth.py             # Login / Register forms
     │   ├── dashboard.py        # Analytics, session history, stats
     │   ├── interview_room.py   # Live interview session UI
     │   ├── quick_scan.py       # Quick assessment flow
     │   ├── resume_analyzer.py  # Resume upload & ATS report
     │   ├── readiness_report.py # Full readiness score visualization
-    │   ├── feedback.py         # Detailed per-question feedback
-    │   └── voice_interview.py  # Voice-mode interview UI
+    │   └── feedback.py         # Detailed per-question feedback
     ├── components/             # Reusable UI components
     ├── styles/
     │   └── main.css            # Global glassmorphism design system
@@ -129,11 +130,31 @@ Overall Score = ATS×0.20 + Communication×0.25 + Technical×0.25
 | **Authentication** | JWT (python-jose) + Bcrypt (passlib) |
 | **Resume Parsing** | pdfplumber · PyMuPDF · python-docx |
 | **Charts & Analytics** | Plotly · Pandas |
-| **Async HTTP** | httpx · aiofiles |
+| **HTTP Client** | httpx · requests |
 
 ---
 
-## ⚡ Quick Start
+## ☁️ Deployment
+
+MockPilot AI uses a **split deployment** — each service is hosted on the platform best suited for it:
+
+| Service | Platform | URL |
+|---|---|---|
+| Backend (FastAPI) | [Render](https://render.com) | `https://mockpilot-api.onrender.com` |
+| Frontend (Streamlit) | [Streamlit Cloud](https://share.streamlit.io) | `https://mockpilot-ai.streamlit.app` |
+
+**Requirements files are intentionally split:**
+
+| File | Used by | Contains |
+|---|---|---|
+| `requirements.txt` | Streamlit Cloud (auto-detected) | Frontend deps only |
+| `requirements-backend.txt` | Render (via `render.yaml`) | Backend deps only |
+
+> See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for full step-by-step instructions.
+
+---
+
+## ⚡ Quick Start (Local)
 
 ### Prerequisites
 
@@ -150,6 +171,10 @@ cd mockpilot-ai
 ### 2. Install Dependencies
 
 ```bash
+# Backend
+pip install -r requirements-backend.txt
+
+# Frontend
 pip install -r requirements.txt
 ```
 
@@ -238,9 +263,9 @@ Full interactive docs available at `http://localhost:8000/docs`.
 
 > **⚠️ Before deploying to production:**
 > - Change `JWT_SECRET_KEY` to a cryptographically secure random string
-> - Restrict CORS `allow_origins` to your actual domain
+> - Restrict CORS `allow_origins` to your actual frontend domain
 > - Use PostgreSQL instead of SQLite for production workloads
-> - Store secrets in a proper secrets manager (e.g., AWS Secrets Manager, Vault)
+> - Store secrets in Render's environment variables / Streamlit Cloud Secrets — never commit `.env`
 
 ---
 
