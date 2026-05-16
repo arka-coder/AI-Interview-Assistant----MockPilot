@@ -7,8 +7,9 @@
 #
 #       BACKEND_URL = "https://your-app.onrender.com"
 #
-# ⚠️  Backend-only packages (fastapi, uvicorn, sqlalchemy, etc.)
-#     are NOT listed here — see requirements-backend.txt for Render.
+# ⚠️  Backend-only packages (fastapi, uvicorn, sqlalchemy, PyMuPDF,
+#     pdfplumber, etc.) are NOT needed here — the frontend calls the
+#     backend API for all heavy processing.
 # ================================================================
 
 
@@ -20,28 +21,22 @@ streamlit==1.35.0
 groq>=0.13.0
 
 
-# ── Resume Parsing ────────────────────────────────────────────────
-pdfplumber>=0.11.0
-PyMuPDF>=1.24.0
-python-docx>=1.1.0
-
-
 # ── HTTP Client ───────────────────────────────────────────────────
 httpx>=0.28.0,<1.0
-requests==2.32.3
+requests>=2.32.0
 
 
 # ── Analytics & Charts ───────────────────────────────────────────
-plotly==5.22.0
+plotly>=5.22.0
 pandas>=2.1.0
 
 
 # ── Validation & Settings ────────────────────────────────────────
 pydantic>=2.7.0
 pydantic-settings>=2.3.0
-email-validator==2.1.1
+email-validator>=2.1.0
 
 
 # ── Utilities ────────────────────────────────────────────────────
-python-dotenv==1.0.1
-python-dateutil==2.9.0
+python-dotenv>=1.0.0
+python-dateutil>=2.9.0
