@@ -35,13 +35,13 @@ def _ensure_guest_session():
     if st.session_state.get("token"):
         return
     try:
-        r = requests.post(f"{BACKEND}/api/auth/guest", timeout=5)
+        r = requests.post(f"{BACKEND}/api/auth/guest", timeout=35)
         if r.ok:
             data = r.json()
             st.session_state["token"] = data["access_token"]
             st.session_state["user"]  = data.get("user", {"username": "Guest", "full_name": "Guest"})
     except Exception:
-        pass
+        pass  # Backend offline/sleeping — user will see the sidebar "Backend Offline" indicator
 
 
 # ── Session defaults ──────────────────────────────────────────────────────────

@@ -20,11 +20,17 @@ def _headers(json_content: bool = True) -> dict:
 def _handle(r: requests.Response, fallback=None):
     """Centralised response handler — auto-clears session on 401."""
     if r.status_code == 401:
-        # Token invalid/expired — force re-login
+        had_token = bool(st.session_state.get("token"))
+        # Clear session
         st.session_state["token"] = None
         st.session_state["user"] = None
-        st.session_state["page"] = "auth"
-        st.error("⚠️ Session expired. Please log in again.")
+        st.session_state["page"] = "landing"
+        if had_token:
+            # Real expiry — user was logged in before
+            st.error("⚠️ Session expired. Please refresh the page.")
+        else:
+            # Backend was unreachable during auto-login (Render cold start)
+            st.warning("⏳ Backend is starting up — please wait ~30 seconds and refresh.")
         st.stop()
     if r.ok:
         return r.json()
