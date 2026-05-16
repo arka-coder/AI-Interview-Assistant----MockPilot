@@ -61,7 +61,9 @@ LANDING_CSS = """
 }
 .mode-card {
   background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-  border-radius:24px;padding:2rem;height:100%;
+  border-radius:24px;padding:2rem;
+  min-height:440px;
+  display:flex;flex-direction:column;
   transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
   position:relative;overflow:hidden;
 }
@@ -75,6 +77,7 @@ LANDING_CSS = """
 .mode-card.primary:hover { border-color:rgba(168,85,247,0.4);box-shadow:0 24px 60px rgba(124,58,237,0.25); }
 .mode-card.secondary:hover { border-color:rgba(34,211,238,0.3);box-shadow:0 24px 60px rgba(34,211,238,0.15); }
 .mode-card:hover::before { transform:scaleX(1); }
+.mode-card-body { flex:1; }
 .mode-badge {
   display:inline-flex;align-items:center;gap:0.4rem;
   border-radius:99px;padding:4px 14px;font-size:0.72rem;font-weight:700;
