@@ -1,9 +1,11 @@
 """
-MockPilot AI — JWT Auth Handler (Fixed)
+MockPilot AI — JWT Auth Handler
+Uses PyJWT (actively maintained, Python 3.14 compatible).
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -32,7 +34,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     # Always convert sub to string — JWT spec + avoids int/str decode mismatch
     if "sub" in to_encode:
         to_encode["sub"] = str(to_encode["sub"])
-    expire = datetime.utcnow() + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode["exp"] = expire
@@ -60,7 +62,7 @@ def get_current_user(
         if sub is None:
             raise exc
         user_id = int(sub)  # Always cast to int
-    except (JWTError, ValueError, TypeError):
+    except (InvalidTokenError, ValueError, TypeError):
         raise exc
 
     user = db.query(User).filter(User.id == user_id).first()
