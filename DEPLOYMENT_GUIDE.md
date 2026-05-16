@@ -22,7 +22,7 @@ MockPilot AI on Render
 4. Connect your GitHub repo
 5. Configure:
    - **Name**: `mockpilot-api`
-   - **Runtime**: Python
+   - **Runtime**: Python 3.13 (⚠️ NOT 3.14 — many packages lack wheel support)
    - **Region**: Oregon (or closer region)
    - **Plan**: Free (or upgrade to Starter for persistence)
    - **Build Command**: `pip install -r requirements-backend.txt`
@@ -54,7 +54,7 @@ MockPilot AI on Render
 2. Click **New → Web Service**
 3. Configure:
    - **Name**: `mockpilot-frontend`
-   - **Runtime**: Python
+   - **Runtime**: Python 3.13 (⚠️ NOT 3.14 — many packages lack wheel support)
    - **Region**: Same as backend (Oregon)
    - **Plan**: Free
    - **Build Command**: `pip install -r frontend/requirements.txt`

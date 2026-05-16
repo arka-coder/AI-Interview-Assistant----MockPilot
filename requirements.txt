@@ -30,8 +30,8 @@ plotly==5.22.0
 pandas>=3.0.0
 
 # ── Validation & Settings ────────────────────────────────────────
-pydantic>=3.0.0
-pydantic-settings>=2.4.0
+pydantic==2.13.4
+pydantic-settings==2.4.0
 email-validator==2.1.1
 
 # ── Utilities ────────────────────────────────────────────────────
