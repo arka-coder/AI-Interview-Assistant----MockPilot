@@ -19,11 +19,7 @@
 
 ---
 
-## 🎬 Demo
 
-📽️ [Watch the demo video](https://drive.google.com/file/d/1h5Bj_-T_jc5vM3wyYvq_847WOV8ydxw1/view?usp=sharing)
-
----
 
 ## ✨ Key Features
 
