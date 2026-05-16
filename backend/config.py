@@ -2,6 +2,7 @@
 MockPilot AI — Centralized Settings
 """
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 
 
@@ -13,8 +14,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
-    # JWT
-    JWT_SECRET_KEY: str = "mockpilot-change-in-prod"
+    # JWT — MUST be set in production via environment variable
+    JWT_SECRET_KEY: str = "mockpilot-dev-secret-change-in-prod"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
@@ -32,6 +33,16 @@ class Settings(BaseSettings):
     # Backend
     BACKEND_URL: str = "http://localhost:8000"
     FRONTEND_URL: str = ""  # Set in Render for CORS
+
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
+    def jwt_key_must_not_be_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError(
+                "JWT_SECRET_KEY must be set! "
+                "Add it to Render → Environment Variables."
+            )
+        return v
 
     class Config:
         env_file = ".env"
