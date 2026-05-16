@@ -43,3 +43,8 @@ services:
 
       - key: MAX_UPLOAD_SIZE_MB
         value: "10"
+
+      - key: FRONTEND_URL
+        value: ""           # Set to deployed Streamlit frontend URL after deploying frontend
+                            # Example: https://mockpilot-frontend.onrender.com
+

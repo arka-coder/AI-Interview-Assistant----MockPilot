@@ -3,9 +3,10 @@ MockPilot AI — Frontend API Client (Fixed)
 """
 import requests
 import streamlit as st
+import os
 from typing import Optional
 
-BACKEND = "http://localhost:8000"
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def _headers(json_content: bool = True) -> dict:

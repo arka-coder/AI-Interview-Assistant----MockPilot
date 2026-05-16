@@ -32,9 +32,21 @@ app = FastAPI(
 )
 
 # ── CORS ────────────────────────────────────────────────────────
+# Allow frontend (local or deployed)
+cors_origins = [
+    "http://localhost:8501",
+    "http://127.0.0.1:8501",
+    os.getenv("FRONTEND_URL", ""),  # Production frontend URL
+]
+# Remove empty strings
+cors_origins = [url for url in cors_origins if url]
+# Add wildcard if no specific frontend URL is set (less secure, for demo only)
+if not os.getenv("FRONTEND_URL"):
+    cors_origins.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501", "*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

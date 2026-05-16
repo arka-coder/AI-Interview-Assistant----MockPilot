@@ -25,7 +25,7 @@ from frontend.views import landing, dashboard, interview_room, feedback, resume_
 from frontend.views import quick_scan, readiness_report
 from frontend.api_client import check_backend
 
-BACKEND = "http://localhost:8000"
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 # ── Auto Guest Login ──────────────────────────────────────────────────────────

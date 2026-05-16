@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # Backend
     BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = ""  # Set in Render for CORS
 
     class Config:
         env_file = ".env"
