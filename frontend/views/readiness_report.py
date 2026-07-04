@@ -4,20 +4,20 @@ MockPilot AI — Readiness Report (Cinematic Score Reveal)
 import streamlit as st
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
-from frontend.components.ui_components import inject_css
+from frontend.components.ui_components import inject_css, html_escape
 
 REPORT_CSS = """<style>
-.rr-hero{background:linear-gradient(160deg,rgba(124,58,237,0.12) 0%,rgba(34,211,238,0.05) 100%);
-  border:1px solid rgba(124,58,237,0.25);border-radius:28px;padding:2.5rem 2rem;
-  text-align:center;position:relative;overflow:hidden;margin-bottom:1.5rem;}
+.rr-hero{background:linear-gradient(160deg,rgba(34,197,94,0.12) 0%,rgba(74,222,128,0.05) 100%);
+  border:1px solid rgba(34,197,94,0.25);border-radius:32px;padding:2.5rem 2rem;
+  text-align:center;position:relative;overflow:hidden;margin-bottom:1.5rem;
+  box-shadow:0 0 60px rgba(34,197,94,0.1);}
 .rr-hero::before{content:'';position:absolute;top:-60%;left:-40%;width:180%;height:180%;
-  background:radial-gradient(circle at 50% 50%,rgba(124,58,237,0.08),transparent 55%);
+  background:radial-gradient(circle at 50% 50%,rgba(34,197,94,0.08),transparent 55%);
   pointer-events:none;}
+/* Stitch-aligned dim bars — use stitch-score-track/fill from main.css */
 .dim-bar-wrap{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
   border-radius:14px;padding:0.9rem 1.1rem;margin-bottom:0.5rem;transition:all 0.3s;}
-.dim-bar-wrap:hover{border-color:rgba(168,85,247,0.3);transform:translateX(4px);}
-.dim-bar-track{height:7px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-top:5px;}
-.dim-bar-fill{height:100%;border-radius:99px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);}
+.dim-bar-wrap:hover{border-color:rgba(22,163,74,0.3);transform:translateX(4px);}
 .ins-card{border-radius:15px;padding:0.8rem 1rem;margin-bottom:0.45rem;
   display:flex;align-items:flex-start;gap:0.6rem;transition:all 0.25s;}
 .ins-card:hover{transform:translateX(5px);}
@@ -27,9 +27,9 @@ REPORT_CSS = """<style>
 .road-row{display:flex;align-items:flex-start;gap:0.85rem;padding:0.8rem 1rem;
   border-radius:13px;margin-bottom:0.5rem;background:rgba(255,255,255,0.02);
   border:1px solid rgba(255,255,255,0.05);transition:all 0.25s;}
-.road-row:hover{background:rgba(124,58,237,0.07);border-color:rgba(124,58,237,0.25);transform:translateX(4px);}
+.road-row:hover{background:rgba(34,197,94,0.07);border-color:rgba(34,197,94,0.25);transform:translateX(4px);}
 .road-day{min-width:34px;height:34px;border-radius:9px;
-  background:linear-gradient(135deg,#7C3AED,#22D3EE);
+  background:linear-gradient(135deg,#22C55E,#4ADE80);
   display:flex;align-items:center;justify-content:center;
   font-size:0.75rem;font-weight:900;color:#fff;flex-shrink:0;}
 .prob-bar{height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-top:6px;}
@@ -53,7 +53,7 @@ def _js_counter(score: float, color: str) -> str:
           font-size="52" font-weight="900" font-family="Outfit,Inter,sans-serif">0</text>
     <text x="110" y="126" text-anchor="middle" fill="#64748B"
           font-size="14" font-family="Outfit,Inter,sans-serif">/ 100</text>
-    <text x="110" y="148" text-anchor="middle" fill="#475569"
+    <text x="110" y="148" text-anchor="middle" fill="#777777"
           font-size="11" font-family="Outfit,Inter,sans-serif">Readiness Score</text>
   </svg>
 </div>
@@ -86,18 +86,18 @@ def _radar(scores: dict):
             scores.get("confidence",0), scores.get("ats_compatibility",0), scores.get("grammar",0)]
     fig = go.Figure(go.Scatterpolar(
         r=vals+[vals[0]], theta=cats+[cats[0]], fill='toself',
-        line=dict(color="#A855F7", width=2.5),
-        fillcolor='rgba(124,58,237,0.18)',
-        marker=dict(color="#22D3EE", size=7, line=dict(color="#A855F7",width=2)),
+        line=dict(color="#16A34A", width=2.5),
+        fillcolor='rgba(34,197,94,0.18)',
+        marker=dict(color="#4ADE80", size=7, line=dict(color="#16A34A",width=2)),
     ))
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Outfit,Inter,sans-serif", color="#94A3B8"),
+        font=dict(family="Outfit,Inter,sans-serif", color="#B5B5B5"),
         margin=dict(l=20,r=20,t=20,b=20), height=300,
         polar=dict(bgcolor="rgba(0,0,0,0)",
             radialaxis=dict(visible=True,range=[0,100],gridcolor="rgba(255,255,255,0.06)",
-                            color="#475569",tickfont=dict(size=9)),
-            angularaxis=dict(gridcolor="rgba(255,255,255,0.06)",color="#94A3B8",
+                            color="#777777",tickfont=dict(size=9)),
+            angularaxis=dict(gridcolor="rgba(255,255,255,0.06)",color="#B5B5B5",
                              tickfont=dict(size=11))),
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -111,9 +111,10 @@ def _dim_bar(label: str, score: float, color: str, icon: str = ""):
         <span style="color:#CBD5E1;font-size:0.82rem;font-weight:600;">{icon} {label}</span>
         <span style="color:{color};font-weight:800;font-size:0.88rem;">{pct:.0f}</span>
       </div>
-      <div class="dim-bar-track">
-        <div class="dim-bar-fill animated-bar" style="width:{pct}%;background:linear-gradient(90deg,{color},{color}99);
-             box-shadow:0 0 8px {color}66;"></div>
+      <div class="stitch-score-track" style="margin-top:6px;">
+        <div class="stitch-score-fill animated-bar"
+             style="width:{pct}%;background:linear-gradient(90deg,{color},{color}99);
+                    box-shadow:0 0 10px {color}66;"></div>
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -138,7 +139,7 @@ def render():
 
     score     = rd.get("overall", 0)
     lbl       = rd.get("label", "Developing")
-    col_hex   = rd.get("color", "#A855F7")
+    col_hex   = rd.get("color", "#16A34A")
     emoji     = rd.get("emoji", "📈")
     role      = st.session_state.get("scan_role", "Role")
     itype     = st.session_state.get("scan_type", "Technical")
@@ -158,7 +159,7 @@ def render():
       </span>
     </div>
     <p style="color:#64748B;font-size:0.85rem;margin:0 0 1.5rem;">
-      {role} · {itype} · {level_str}
+      {html_escape(role)} · {html_escape(itype)} · {html_escape(level_str)}
     </p>""", unsafe_allow_html=True)
 
     # Animated score counter (JS)
@@ -168,20 +169,20 @@ def render():
 
     # Level badge
     grad_map = {
-        "Industry Ready": "linear-gradient(135deg,rgba(16,185,129,0.2),rgba(34,211,238,0.1))",
-        "Interview Ready": "linear-gradient(135deg,rgba(168,85,247,0.2),rgba(34,211,238,0.1))",
-        "Developing":     "linear-gradient(135deg,rgba(245,158,11,0.18),rgba(124,58,237,0.08))",
-        "Beginner":       "linear-gradient(135deg,rgba(239,68,68,0.18),rgba(124,58,237,0.08))",
+        "Industry Ready": "linear-gradient(135deg,rgba(16,185,129,0.2),rgba(74,222,128,0.1))",
+        "Interview Ready": "linear-gradient(135deg,rgba(22,163,74,0.2),rgba(74,222,128,0.1))",
+        "Developing":     "linear-gradient(135deg,rgba(245,158,11,0.18),rgba(34,197,94,0.08))",
+        "Beginner":       "linear-gradient(135deg,rgba(239,68,68,0.18),rgba(34,197,94,0.08))",
     }
     st.markdown(f"""
     <div class="level-badge-pop" style="margin-top:0.5rem;">
       <div style="display:inline-flex;align-items:center;gap:0.5rem;
            background:{grad_map.get(lbl,'')};border:1px solid {col_hex}44;
            border-radius:99px;padding:8px 24px;">
-        <span style="font-size:1.3rem;">{emoji}</span>
-        <span style="color:{col_hex};font-size:1.1rem;font-weight:900;">{lbl}</span>
+        <span style="font-size:1.3rem;">{html_escape(emoji)}</span>
+        <span style="color:{col_hex};font-size:1.1rem;font-weight:900;">{html_escape(lbl)}</span>
       </div>
-      <p style="color:#475569;font-size:0.72rem;margin:6px 0 0;">
+      <p style="color:#777777;font-size:0.72rem;margin:6px 0 0;">
         0–40 Beginner &nbsp;·&nbsp; 41–65 Developing &nbsp;·&nbsp; 66–80 Interview Ready &nbsp;·&nbsp; 81–100 Industry Ready
       </p>
     </div>""", unsafe_allow_html=True)
@@ -194,8 +195,8 @@ def render():
         st.markdown('<p style="color:#64748B;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;" class="reveal-2">📊 Score Breakdown</p>', unsafe_allow_html=True)
         dims = [
             ("Resume Strength",    rd.get("resume_strength",0),    "#F59E0B", "📄"),
-            ("Communication",      rd.get("communication",0),       "#A855F7", "🗣️"),
-            ("Technical Readiness",rd.get("technical_readiness",0), "#22D3EE", "⚡"),
+            ("Communication",      rd.get("communication",0),       "#16A34A", "🗣️"),
+            ("Technical Readiness",rd.get("technical_readiness",0), "#4ADE80", "⚡"),
             ("Confidence",         rd.get("confidence",0),          "#10B981", "💪"),
             ("ATS Compatibility",  rd.get("ats_compatibility",0),   "#3B82F6", "🎯"),
             ("Grammar & Clarity",  rd.get("grammar",0),             "#EC4899", "✍️"),
@@ -212,17 +213,17 @@ def render():
     # ── AI HIRING INSIGHTS ────────────────────────────────────────────────────
     st.markdown("""<div class="reveal-3">""", unsafe_allow_html=True)
     prob      = ins.get("shortlist_probability","Medium")
-    prob_clr  = {"Very High":"#10B981","High":"#A855F7","Medium":"#F59E0B","Low":"#EF4444"}.get(prob,"#A855F7")
+    prob_clr  = {"Very High":"#10B981","High":"#16A34A","Medium":"#F59E0B","Low":"#EF4444"}.get(prob,"#16A34A")
     prob_pct  = {"Very High":92,"High":75,"Medium":50,"Low":28}.get(prob,50)
 
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(34,211,238,0.05));
-                border:1px solid rgba(124,58,237,0.25);border-radius:20px;padding:1.5rem;margin-bottom:1rem;">
+    <div style="background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(74,222,128,0.05));
+                border:1px solid rgba(34,197,94,0.25);border-radius:20px;padding:1.5rem;margin-bottom:1rem;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
         <div>
           <p style="color:#64748B;font-size:0.7rem;font-weight:700;text-transform:uppercase;
                     letter-spacing:1px;margin:0 0 0.3rem;">🤖 AI HIRING INSIGHTS</p>
-          <h3 style="color:#F1F5F9;font-size:1.1rem;font-weight:800;margin:0;">Recruiter Intelligence Report</h3>
+          <h3 style="color:#FFFFFF;font-size:1.1rem;font-weight:800;margin:0;">Recruiter Intelligence Report</h3>
         </div>
         <div style="text-align:right;">
           <span style="background:{prob_clr}18;color:{prob_clr};border:1px solid {prob_clr}44;
@@ -237,18 +238,18 @@ def render():
       </div>
       <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;
                   border-left:3px solid {prob_clr};">
-        <p style="color:#94A3B8;font-size:0.88rem;margin:0;font-style:italic;line-height:1.55;">
-          "{ins.get('recruiter_impression','Strong candidate profile detected.')}"
+        <p style="color:#B5B5B5;font-size:0.88rem;margin:0;font-style:italic;line-height:1.55;">
+          "{html_escape(ins.get('recruiter_impression','Strong candidate profile detected.'))}"
         </p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
         <div>
           <p style="color:#10B981;font-size:0.72rem;font-weight:700;margin:0 0 0.4rem;text-transform:uppercase;letter-spacing:0.5px;">✅ Strong Signals</p>
-          {''.join(f'<div class="ins-card ins-green"><span style="color:#10B981;font-size:0.9rem;">✓</span><span style="color:#CBD5E1;font-size:0.8rem;line-height:1.4;">{s}</span></div>' for s in ins.get("strong_signals",[]))}
+          {''.join(f'<div class="ins-card ins-green"><span style="color:#10B981;font-size:0.9rem;">✓</span><span style="color:#CBD5E1;font-size:0.8rem;line-height:1.4;">{html_escape(s)}</span></div>' for s in ins.get("strong_signals",[]))}
         </div>
         <div>
           <p style="color:#EF4444;font-size:0.72rem;font-weight:700;margin:0 0 0.4rem;text-transform:uppercase;letter-spacing:0.5px;">⚠️ Hiring Risks</p>
-          {''.join(f'<div class="ins-card ins-red"><span style="color:#EF4444;font-size:0.9rem;">!</span><span style="color:#CBD5E1;font-size:0.8rem;line-height:1.4;">{r}</span></div>' for r in ins.get("hiring_risks",[]))}
+          {''.join(f'<div class="ins-card ins-red"><span style="color:#EF4444;font-size:0.9rem;">!</span><span style="color:#CBD5E1;font-size:0.8rem;line-height:1.4;">{html_escape(r)}</span></div>' for r in ins.get("hiring_risks",[]))}
         </div>
       </div>
     </div>""", unsafe_allow_html=True)
@@ -258,7 +259,7 @@ def render():
     st.markdown("""
     <div class="reveal-4" style="margin-bottom:0.75rem;">
       <p style="color:#64748B;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">🗓️ PERSONALIZED 7-DAY IMPROVEMENT ROADMAP</p>
-      <h3 style="color:#F1F5F9;font-size:1.1rem;font-weight:800;margin:0 0 0.75rem;">Your AI Action Plan</h3>
+      <h3 style="color:#FFFFFF;font-size:1.1rem;font-weight:800;margin:0 0 0.75rem;">Your AI Action Plan</h3>
     </div>""", unsafe_allow_html=True)
 
     pri_clr = {"High":"#EF4444","Medium":"#F59E0B","Low":"#10B981"}
@@ -272,11 +273,11 @@ def render():
               <div class="road-day">D{day.get('day',i+1)}</div>
               <div style="flex:1;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <p style="color:#F1F5F9;font-weight:700;font-size:0.85rem;margin:0;">{day.get('focus','')}</p>
-                  <span style="background:{pc}18;color:{pc};border-radius:99px;padding:1px 9px;font-size:0.65rem;font-weight:700;">{day.get('priority','')}</span>
+                  <p style="color:#FFFFFF;font-weight:700;font-size:0.85rem;margin:0;">{html_escape(day.get('focus',''))}</p>
+                  <span style="background:{pc}18;color:{pc};border-radius:99px;padding:1px 9px;font-size:0.65rem;font-weight:700;">{html_escape(day.get('priority',''))}</span>
                 </div>
-                <p style="color:#64748B;font-size:0.78rem;margin:2px 0;line-height:1.4;">{day.get('task','')}</p>
-                <p style="color:#334155;font-size:0.7rem;margin:0;">⏱ {day.get('duration','30 min')}</p>
+                <p style="color:#64748B;font-size:0.78rem;margin:2px 0;line-height:1.4;">{html_escape(day.get('task',''))}</p>
+                <p style="color:#334155;font-size:0.7rem;margin:0;">⏱ {html_escape(day.get('duration','30 min'))}</p>
               </div>
             </div>""", unsafe_allow_html=True)
 
@@ -285,31 +286,31 @@ def render():
     # ── Q&A ANALYSIS ──────────────────────────────────────────────────────────
     with st.expander("📋  View Full Question-by-Question Analysis", expanded=False):
         for q_data, q_label, border_c in [
-            (q1, "Q1 — Communication & HR", "#A855F7"),
-            (q2, "Q2 — Technical & Role-Specific", "#22D3EE"),
+            (q1, "Q1 — Communication & HR", "#16A34A"),
+            (q2, "Q2 — Technical & Role-Specific", "#4ADE80"),
         ]:
             fb = q_data.get("feedback", {})
             st.markdown(f"""
             <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);
                         border-left:4px solid {border_c};border-radius:14px;padding:1.2rem;margin-bottom:1rem;">
-              <p style="color:{border_c};font-weight:700;font-size:0.82rem;margin:0 0 0.4rem;">{q_label}</p>
-              <p style="color:#F1F5F9;font-size:0.95rem;font-weight:500;margin:0 0 0.75rem;line-height:1.6;">{q_data.get('text','')}</p>
+              <p style="color:{border_c};font-weight:700;font-size:0.82rem;margin:0 0 0.4rem;">{html_escape(q_label)}</p>
+              <p style="color:#FFFFFF;font-size:0.95rem;font-weight:500;margin:0 0 0.75rem;line-height:1.6;">{html_escape(q_data.get('text',''))}</p>
               <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:0.7rem;margin-bottom:0.75rem;">
-                <p style="color:#475569;font-size:0.68rem;font-weight:700;text-transform:uppercase;margin:0 0 0.25rem;">Your Answer</p>
-                <p style="color:#CBD5E1;font-size:0.83rem;margin:0;line-height:1.5;">{q_data.get('answer','—')}</p>
+                <p style="color:#777777;font-size:0.68rem;font-weight:700;text-transform:uppercase;margin:0 0 0.25rem;">Your Answer</p>
+                <p style="color:#CBD5E1;font-size:0.83rem;margin:0;line-height:1.5;">{html_escape(q_data.get('answer','—'))}</p>
               </div>
-              <p style="color:#94A3B8;font-size:0.83rem;line-height:1.6;margin:0 0 0.75rem;">{fb.get('ai_feedback','')[:320]}</p>
+              <p style="color:#B5B5B5;font-size:0.83rem;line-height:1.6;margin:0 0 0.75rem;">{html_escape(fb.get('ai_feedback','')[:320])}</p>
             </div>""", unsafe_allow_html=True)
             sc_cols = st.columns(5)
             for col, (lname, val, clr) in zip(sc_cols, [
-                ("Overall",fb.get("overall_score",0),"#A855F7"),
-                ("Confidence",fb.get("confidence_score",0),"#22D3EE"),
+                ("Overall",fb.get("overall_score",0),"#16A34A"),
+                ("Confidence",fb.get("confidence_score",0),"#4ADE80"),
                 ("Communication",fb.get("communication_score",0),"#10B981"),
                 ("Technical",fb.get("technical_score",0),"#3B82F6"),
                 ("Grammar",fb.get("grammar_score",0),"#F59E0B"),
             ]):
                 with col:
-                    st.markdown(f'<div style="text-align:center;padding:0.4rem;"><p style="color:{clr};font-size:1.2rem;font-weight:900;margin:0;">{val:.0f}</p><p style="color:#475569;font-size:0.67rem;margin:0;">{lname}</p></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="text-align:center;padding:0.4rem;"><p style="color:{clr};font-size:1.2rem;font-weight:900;margin:0;">{val:.0f}</p><p style="color:#777777;font-size:0.67rem;margin:0;">{lname}</p></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 

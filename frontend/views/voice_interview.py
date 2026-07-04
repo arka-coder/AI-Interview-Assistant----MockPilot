@@ -4,9 +4,10 @@ WhatsApp-style real-time voice conversation with AI interviewer.
 """
 import streamlit as st
 import json
+import os
 from frontend.components.ui_components import inject_css
 
-BACKEND = "http://localhost:8000"
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def render():
@@ -17,7 +18,7 @@ def render():
     st.markdown("""
     <div class="fade-in-up" style="text-align:center;margin-bottom:1.5rem;">
       <h1 style="font-size:2rem;font-weight:800;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
+                 background:linear-gradient(135deg,#16A34A,#4ADE80);
                  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
                  background-clip:text;margin:0;">🎙️ Live Voice Interview</h1>
       <p style="color:#64748B;margin:0.4rem 0 0;font-size:0.9rem;">
@@ -39,9 +40,9 @@ def render():
     # If no active session, let user pick role/type quickly
     if not role or not itype:
         st.markdown("""
-        <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);
+        <div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);
                     border-radius:12px;padding:0.9rem 1.25rem;margin-bottom:1rem;">
-          <p style="color:#22D3EE;font-size:0.8rem;font-weight:600;margin:0 0 0.6rem;
+          <p style="color:#4ADE80;font-size:0.8rem;font-weight:600;margin:0 0 0.6rem;
                     text-transform:uppercase;letter-spacing:0.5px;">⚡ Quick Setup</p>
           <p style="color:#64748B;font-size:0.78rem;margin:0;">
             No active interview session found. Configure below to start a voice conversation.
@@ -74,14 +75,14 @@ def render():
 
     # Config bar (always shown)
     st.markdown(f"""
-    <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);
+    <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);
                 border-radius:12px;padding:0.75rem 1.25rem;margin-bottom:1.25rem;
                 display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;">
-      <span style="color:#A855F7;font-weight:600;font-size:0.85rem;">🎯 {role}</span>
+      <span style="color:#16A34A;font-weight:600;font-size:0.85rem;">🎯 {role}</span>
       <span style="color:#64748B;font-size:0.8rem;">·</span>
-      <span style="color:#94A3B8;font-size:0.85rem;">🧩 {itype}</span>
+      <span style="color:#B5B5B5;font-size:0.85rem;">🧩 {itype}</span>
       <span style="color:#64748B;font-size:0.8rem;">·</span>
-      <span style="color:#94A3B8;font-size:0.85rem;">📊 {exp.capitalize()}</span>
+      <span style="color:#B5B5B5;font-size:0.85rem;">📊 {exp.capitalize()}</span>
       <span style="margin-left:auto;background:#10B981;color:#fff;font-size:0.75rem;
                   border-radius:99px;padding:2px 12px;font-weight:600;">● LIVE</span>
     </div>
@@ -91,7 +92,7 @@ def render():
     # Current question context (if coming from interview room)
     if q_text:
         st.markdown(f"""
-        <div style="background:rgba(34,211,238,0.06);border-left:3px solid #22D3EE;
+        <div style="background:rgba(74,222,128,0.06);border-left:3px solid #4ADE80;
                     border-radius:0 10px 10px 0;padding:0.75rem 1rem;margin-bottom:1rem;">
           <p style="color:#64748B;font-size:0.75rem;margin:0 0 0.3rem;font-weight:600;
                     text-transform:uppercase;letter-spacing:0.5px;">Current Question</p>
@@ -422,7 +423,7 @@ def _inject_voice_ui_css():
   flex-direction: column;
   height: 560px;
   background: rgba(7,7,15,0.6);
-  border: 1px solid rgba(124,58,237,0.2);
+  border: 1px solid rgba(34,197,94,0.2);
   border-radius: 20px;
   overflow: hidden;
   backdrop-filter: blur(12px);
@@ -437,7 +438,7 @@ def _inject_voice_ui_css():
   flex-direction: column;
   gap: 1rem;
   scrollbar-width: thin;
-  scrollbar-color: rgba(124,58,237,0.3) transparent;
+  scrollbar-color: rgba(34,197,94,0.3) transparent;
 }
 
 /* Single message row */
@@ -457,13 +458,13 @@ def _inject_voice_ui_css():
 .vc-avatar {
   width: 36px; height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg,#7C3AED,#22D3EE);
+  background: linear-gradient(135deg,#22C55E,#4ADE80);
   display: flex; align-items: center; justify-content: center;
   font-size: 1.1rem; flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(124,58,237,0.35);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.20);
 }
 .vc-you {
-  background: linear-gradient(135deg,#10B981,#06B6D4);
+  background: linear-gradient(135deg,#10B981,#16A34A);
   box-shadow: 0 0 12px rgba(16,185,129,0.3);
 }
 
@@ -475,8 +476,8 @@ def _inject_voice_ui_css():
   position: relative;
 }
 .vc-ai .vc-bubble {
-  background: rgba(124,58,237,0.15);
-  border: 1px solid rgba(124,58,237,0.25);
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.25);
   border-bottom-left-radius: 4px;
 }
 .vc-candidate .vc-bubble {
@@ -492,7 +493,7 @@ def _inject_voice_ui_css():
 }
 .vc-time {
   font-size: 0.7rem;
-  color: #475569;
+  color: #777777;
   display: block;
   text-align: right;
 }
@@ -519,11 +520,11 @@ def _inject_voice_ui_css():
   width: 3px;
   height: 4px;
   border-radius: 2px;
-  background: #475569;
+  background: #777777;
   transition: height 0.1s ease, background 0.3s ease;
 }
 .vc-waveform.active span {
-  background: #A855F7;
+  background: #16A34A;
   animation: wave-bounce 0.6s ease-in-out infinite alternate;
 }
 .vc-waveform.active span:nth-child(1)  { animation-delay: 0.0s; }
@@ -538,7 +539,7 @@ def _inject_voice_ui_css():
 .vc-waveform.active span:nth-child(10) { animation-delay: 0.1s; }
 
 .vc-waveform.speaking span {
-  background: #22D3EE;
+  background: #4ADE80;
   animation: wave-bounce 0.4s ease-in-out infinite alternate;
 }
 
@@ -553,7 +554,7 @@ def _inject_voice_ui_css():
 }
 .vc-status-recording { color: #EF4444 !important; }
 .vc-status-processing { color: #F59E0B !important; }
-.vc-status-speaking   { color: #22D3EE !important; }
+.vc-status-speaking   { color: #4ADE80 !important; }
 .vc-status-error      { color: #EF4444 !important; }
 .vc-status-idle       { color: #64748B !important; }
 
@@ -574,18 +575,18 @@ def _inject_voice_ui_css():
   width: 68px; height: 68px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg,#7C3AED,#A855F7);
+  background: linear-gradient(135deg,#22C55E,#16A34A);
   color: white;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
-  box-shadow: 0 0 24px rgba(124,58,237,0.5);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.20);
   transition: all 0.2s ease;
   position: relative;
   outline: none;
 }
 .vc-mic-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 36px rgba(124,58,237,0.7);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.20);
 }
 .vc-mic-btn.recording {
   background: linear-gradient(135deg,#EF4444,#F97316);
@@ -599,7 +600,7 @@ def _inject_voice_ui_css():
 
 .vc-hint {
   font-size: 0.75rem;
-  color: #475569;
+  color: #777777;
   position: absolute;
   bottom: 0.3rem;
   left: 50%;

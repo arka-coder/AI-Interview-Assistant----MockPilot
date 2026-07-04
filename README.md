@@ -194,16 +194,20 @@ BACKEND_URL=http://localhost:8000
 ### 4. Launch the Application
 
 **Option A — One-click launch (Windows):**
-```bash
+```bat
 start.bat
 ```
 
 **Option B — Manual launch (two terminals):**
 
+> ⚠️ Both commands must be run from the **project root** directory.
+
 ```bash
 # Terminal 1 — Backend (FastAPI)
 python -m uvicorn backend.main:app --reload --port 8000
+```
 
+```bash
 # Terminal 2 — Frontend (Streamlit)
 python -m streamlit run frontend/app.py
 ```
@@ -212,7 +216,7 @@ python -m streamlit run frontend/app.py
 
 | Service | URL |
 |---|---|
-| 🖥️ Frontend (Streamlit) | http://localhost:8501 |
+| 🖥️ Frontend (Streamlit) | http://localhost:8502 |
 | ⚙️ Backend API | http://localhost:8000 |
 | 📚 API Docs (Swagger) | http://localhost:8000/docs |
 

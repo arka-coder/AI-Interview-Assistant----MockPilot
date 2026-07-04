@@ -4,7 +4,7 @@ Upload, parse, ATS score, skill extraction, personalized question generation.
 """
 import streamlit as st
 from frontend.components.ui_components import (
-    inject_css, section_header, info_card, list_card
+    inject_css, section_header, info_card, list_card, html_escape
 )
 from frontend.api_client import upload_resume, list_resumes, delete_resume
 from frontend.api_client import BACKEND
@@ -46,14 +46,24 @@ def render():
     </style>""", unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="fade-in-up" style="margin-bottom:2rem;">
-      <h1 style="font-size:2rem;font-weight:800;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;margin:0;">Resume Analyzer</h1>
-      <p style="color:#64748B;font-size:0.9rem;margin:4px 0 0;">
-        Upload your resume · Get ATS score · Generate personalized interview questions
-      </p>
+    <div class="stitch-banner fade-in-up" style="margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <div style="width:52px;height:52px;border-radius:16px;
+                    background:linear-gradient(135deg,rgba(34,197,94,0.3),rgba(74,222,128,0.2));
+                    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+                    border:1px solid rgba(34,197,94,0.3);flex-shrink:0;">
+          📄
+        </div>
+        <div>
+          <h1 style="font-size:2rem;font-weight:800;
+                     background:linear-gradient(135deg,#d2bbff,#5de6ff);
+                     -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                     background-clip:text;margin:0;letter-spacing:-0.02em;">Resume Analyzer</h1>
+          <p style="color:#ccc3d8;font-size:0.9rem;margin:4px 0 0;">
+            Upload your resume · Get ATS score · Generate personalized interview questions
+          </p>
+        </div>
+      </div>
     </div>""", unsafe_allow_html=True)
 
     tab_upload, tab_library = st.tabs(["📤  Upload Resume", "📚  My Resumes"])
@@ -62,7 +72,7 @@ def render():
     with tab_upload:
         st.markdown("""
         <div class="glass-card" style="margin-bottom:1rem;">
-          <h3 style="font-size:1rem;font-weight:700;color:#F1F5F9;margin:0 0 0.4rem;">
+          <h3 style="font-size:1rem;font-weight:700;color:#FFFFFF;margin:0 0 0.4rem;">
             📄 Upload Resume
           </h3>
           <p style="color:#64748B;font-size:0.85rem;margin:0;">
@@ -70,21 +80,36 @@ def render():
           </p>
         </div>""", unsafe_allow_html=True)
 
+        st.markdown('<div class="hide-uploader">', unsafe_allow_html=True)
         uploaded = st.file_uploader(
             "Drop your resume here",
             type=["pdf", "docx", "doc", "txt"],
             label_visibility="collapsed",
         )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if not uploaded:
+            st.markdown("""
+            <div class="stitch-upload-zone">
+              <span style="font-size:2.5rem;display:block;margin-bottom:0.75rem;">📄</span>
+              <p style="font-family:'Outfit',sans-serif;font-size:1.2rem;font-weight:700;color:#FFFFFF;margin:0 0 0.25rem;">
+                Drop your resume here
+              </p>
+              <p style="color:#64748B;font-size:0.85rem;margin:0;">
+                Click the invisible zone above to upload
+              </p>
+            </div>
+            """, unsafe_allow_html=True)
 
         if uploaded:
             col_a, col_b = st.columns([3, 1])
             with col_a:
                 st.markdown(f"""
-                <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);
+                <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);
                             border-radius:10px;padding:0.7rem 1rem;display:flex;align-items:center;gap:0.7rem;">
                   <span style="font-size:1.5rem;">📄</span>
                   <div>
-                    <p style="color:#F1F5F9;font-weight:600;font-size:0.9rem;margin:0;">{uploaded.name}</p>
+                    <p style="color:#FFFFFF;font-weight:600;font-size:0.9rem;margin:0;">{html_escape(uploaded.name)}</p>
                     <p style="color:#64748B;font-size:0.75rem;margin:2px 0 0;">
                       {uploaded.size / 1024:.1f} KB
                     </p>
@@ -94,7 +119,7 @@ def render():
                 analyze_btn = st.button("🔍  Analyze", use_container_width=True, key="analyze_btn")
 
             if analyze_btn:
-                with st.spinner("🔍 Analyzing your resume with AI..."):
+                with st.spinner("Analyzing your resume…"):
                     result = upload_resume(uploaded.read(), uploaded.name)
 
                 if "error" in result:
@@ -117,7 +142,7 @@ def render():
             st.markdown("""
             <div class="glass-card" style="text-align:center;padding:3rem;">
               <p style="font-size:2.5rem;">📂</p>
-              <h3 style="color:#F1F5F9;">No resumes uploaded yet</h3>
+              <h3 style="color:#FFFFFF;">No resumes uploaded yet</h3>
               <p style="color:#64748B;">Upload your first resume to get started.</p>
             </div>""", unsafe_allow_html=True)
         else:
@@ -135,11 +160,11 @@ def render():
                 with col_a:
                     st.markdown(f"""
                     <div>
-                      <p style="color:#F1F5F9;font-weight:600;font-size:0.9rem;margin:0;">
-                        📄 {r['filename']}
+                      <p style="color:#FFFFFF;font-weight:600;font-size:0.9rem;margin:0;">
+                        📄 {html_escape(r['filename'])}
                       </p>
                       <p style="color:#64748B;font-size:0.78rem;margin:2px 0 0;">
-                        Uploaded {r.get('uploaded_at','')[:10]}
+                        Uploaded {html_escape(r.get('uploaded_at','')[:10])}
                       </p>
                     </div>""", unsafe_allow_html=True)
 
@@ -163,7 +188,7 @@ def render():
                                 st.session_state.pop(confirm_key, None)
                                 if st.session_state.get("analyzed_resume", {}).get("id") == rid:
                                     st.session_state.pop("analyzed_resume", None)
-                                st.success(f"✅ Deleted {r['filename']}")
+                                st.success(f"Deleted {r['filename']}")
                                 st.rerun()
                             else:
                                 st.error("❌ Delete failed")
@@ -191,17 +216,30 @@ def _render_analysis(data: dict):
     ats_label = "Excellent" if ats >= 70 else "Moderate" if ats >= 45 else "Needs Work"
 
     st.markdown(f"""
-    <div class="glass-card" style="display:flex;align-items:center;gap:2rem;
-                border-left:4px solid {ats_color};margin-bottom:1.5rem;">
-      <div style="text-align:center;min-width:100px;">
-        <h1 style="font-size:3.5rem;font-weight:900;color:{ats_color};margin:0;">{ats:.0f}</h1>
-        <p style="color:#64748B;font-size:0.75rem;margin:0;">ATS Score</p>
+    <div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(74,222,128,0.04));
+                border:1px solid rgba(34,197,94,0.25);border-left:4px solid {ats_color};
+                border-radius:24px;padding:1.5rem 2rem;
+                display:flex;align-items:center;gap:2rem;margin-bottom:1.5rem;
+                box-shadow:0 0 40px rgba(34,197,94,0.1);">
+      <div style="text-align:center;min-width:100px;flex-shrink:0;">
+        <div style="width:90px;height:90px;border-radius:50%;
+                    background:conic-gradient(from 0deg, {ats_color} {ats:.0f}%, rgba(255,255,255,0.05) {ats:.0f}%);
+                    display:flex;align-items:center;justify-content:center;position:relative;
+                    margin:0 auto;box-shadow:0 0 20px {ats_color}40;">
+          <div style="position:absolute;inset:6px;border-radius:50%;background:#0F120F;
+                      display:flex;align-items:center;justify-content:center;flex-direction:column;">
+            <h1 style="font-family:'Outfit',sans-serif;font-size:1.75rem;font-weight:900;
+                       color:{ats_color};margin:0;line-height:1;">{ats:.0f}</h1>
+            <p style="color:rgba(255,255,255,0.4);font-size:0.55rem;font-weight:700;
+                      letter-spacing:0.1em;text-transform:uppercase;margin:0;">ATS</p>
+          </div>
+        </div>
       </div>
       <div>
-        <h3 style="color:#F1F5F9;font-weight:700;margin:0 0 0.3rem;">
+        <h3 style="color:#e3e0f3;font-weight:700;margin:0 0 0.3rem;font-family:'Outfit',sans-serif;">
           {ats_label} ATS Compatibility
         </h3>
-        <p style="color:#94A3B8;font-size:0.88rem;margin:0;line-height:1.5;">
+        <p style="color:#ccc3d8;font-size:0.88rem;margin:0;line-height:1.65;">
           Your resume has been scored against common ATS keyword requirements.
           {'Great job! Your resume is highly optimized.' if ats >= 70 else 'Consider adding more relevant keywords and quantifying achievements.'}
         </p>
@@ -219,17 +257,16 @@ def _render_analysis(data: dict):
                 for category, skill_list in skills.items():
                     if skill_list:
                         tags = " ".join([
-                            f'<span style="background:rgba(124,58,237,0.15);'
-                            f'color:#A855F7;border:1px solid rgba(124,58,237,0.3);'
-                            f'border-radius:99px;padding:2px 10px;font-size:0.78rem;'
-                            f'margin:3px;display:inline-block;">{s}</span>'
+                            f'<span class="stitch-skill-badge">'
+                            f'{html_escape(s)}</span>'
                             for s in skill_list
                         ])
                         st.markdown(f"""
                         <div style="margin-bottom:1rem;">
-                          <p style="color:#64748B;font-size:0.78rem;font-weight:600;
-                                    text-transform:uppercase;letter-spacing:0.5px;margin:0 0 0.4rem;">
-                            {category}
+                          <p style="font-family:'Space Grotesk',sans-serif;color:#ccc3d8;
+                                    font-size:0.7rem;font-weight:700;
+                                    text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.5rem;">
+                            {html_escape(category)}
                           </p>
                           <div>{tags}</div>
                         </div>""", unsafe_allow_html=True)
@@ -239,15 +276,14 @@ def _render_analysis(data: dict):
         if roles:
             st.markdown("<br>", unsafe_allow_html=True)
             role_tags = " ".join([
-                f'<span style="background:rgba(34,211,238,0.1);color:#22D3EE;'
-                f'border:1px solid rgba(34,211,238,0.2);border-radius:99px;'
-                f'padding:2px 10px;font-size:0.8rem;margin:3px;display:inline-block;">'
-                f'🎯 {r}</span>' for r in roles
+                f'<span class="stitch-skill-badge cyan">'
+                f'{html_escape(r)}</span>' for r in roles
             ])
             st.markdown(f"""
             <div>
-              <p style="color:#64748B;font-size:0.78rem;font-weight:600;
-                        text-transform:uppercase;letter-spacing:0.5px;margin:0 0 0.4rem;">
+              <p style="font-family:'Space Grotesk',sans-serif;color:#ccc3d8;
+                        font-size:0.7rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.5rem;">
                 Detected Roles
               </p>
               <div>{role_tags}</div>
@@ -273,13 +309,9 @@ def _render_analysis(data: dict):
         section_header("Improvement Suggestions", "💡")
         for i, s in enumerate(suggestions):
             st.markdown(f"""
-            <div style="display:flex;align-items:flex-start;gap:0.75rem;
-                        background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);
-                        border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.6rem;">
-              <span style="color:#F59E0B;font-size:0.85rem;font-weight:700;min-width:24px;">
-                {i+1}.
-              </span>
-              <p style="color:#CBD5E1;font-size:0.88rem;margin:0;line-height:1.6;">{s}</p>
+            <div class="stitch-suggestion-card">
+              <span class="stitch-suggestion-num">{i+1}</span>
+              <p style="color:#e3e0f3;font-size:0.88rem;margin:0;line-height:1.65;">{html_escape(s)}</p>
             </div>""", unsafe_allow_html=True)
 
     # CTA

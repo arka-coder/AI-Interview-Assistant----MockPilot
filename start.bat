@@ -19,13 +19,13 @@ start "MockPilot Backend" cmd /k "python -m uvicorn backend.main:app --reload --
 timeout /t 3 /nobreak >nul
 
 :: Start Frontend
-echo [2/2] Starting Streamlit Frontend on http://localhost:8501 ...
+echo [2/2] Starting Streamlit Frontend on http://localhost:8502 ...
 start "MockPilot Frontend" cmd /k "python -m streamlit run frontend/app.py"
 
 echo.
 echo ✅ MockPilot AI is running!
 echo    Backend:  http://localhost:8000
-echo    Frontend: http://localhost:8501
+echo    Frontend: http://localhost:8502
 echo    API Docs: http://localhost:8000/docs
 echo.
 pause

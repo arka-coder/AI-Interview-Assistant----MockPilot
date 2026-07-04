@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.dirname(ROOT))
 
 # ── Page config (MUST be first Streamlit call) ────────────────────────────────
 st.set_page_config(
-    page_title="MockPilot AI — 2-Minute Interview Readiness Engine",
-    page_icon="⚡",
+    page_title="MockPilot | Interview Readiness",
+    page_icon=":material/bolt:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -22,6 +22,7 @@ st.set_page_config(
 # ── Imports ───────────────────────────────────────────────────────────────────
 from frontend.components.ui_components import inject_css
 from frontend.views import landing, dashboard, interview_room, feedback, resume_analyzer
+from frontend.views import auth
 from frontend.views import quick_scan, readiness_report
 from frontend.api_client import check_backend
 
@@ -64,117 +65,118 @@ _ensure_guest_session()
 def render_sidebar():
     inject_css()
 
-    # Extra sidebar CSS
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { background:rgba(7,7,15,0.97) !important; }
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div { gap: 1px !important; }
-    [data-testid="stSidebar"] .stButton { margin-bottom: 0 !important; }
-    .nav-active button {
-      background:rgba(124,58,237,0.18) !important;
-      border-color:rgba(168,85,247,0.4) !important;
-      color:#A855F7 !important;
-      box-shadow:0 0 16px rgba(124,58,237,0.2) !important;
-    }
-    .nav-section-label {
-      color:#334155;font-size:0.65rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:1px;
-      padding:0.75rem 0.5rem 0.3rem;
-    }
-    </style>""", unsafe_allow_html=True)
-
     with st.sidebar:
-        # Brand
+        current = st.session_state.get("page", "landing")
+
+        # ── Brand Header ──────────────────────────────────────────────────────
         st.markdown("""
-        <div style="padding:1.2rem 0 0.75rem;border-bottom:1px solid rgba(255,255,255,0.06);
-                    margin-bottom:1rem;">
-          <div style="display:flex;align-items:center;gap:0.6rem;">
-            <div style="width:38px;height:38px;border-radius:12px;
-                        background:linear-gradient(135deg,#7C3AED,#22D3EE);
+        <div style="padding:1.75rem 1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.06);
+                    margin-bottom:0.75rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:38px;height:38px;border-radius:11px;flex-shrink:0;
+                        background:var(--primary);
                         display:flex;align-items:center;justify-content:center;
-                        font-size:1.2rem;box-shadow:0 0 16px rgba(124,58,237,0.4);">⚡</div>
+                        box-shadow:0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#052e13"
+                   stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+              </svg>
+            </div>
             <div>
-              <p style="font-size:1.1rem;font-weight:900;
-                        background:linear-gradient(135deg,#A855F7,#22D3EE);
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                        background-clip:text;margin:0;line-height:1.1;">MockPilot AI</p>
-              <p style="color:#334155;font-size:0.62rem;margin:0;letter-spacing:0.3px;">
-                Interview Readiness Engine
-              </p>
+              <p style="font-family:'Outfit',sans-serif;font-size:1.05rem;font-weight:800;
+                        color:#FFFFFF;margin:0;line-height:1.1;letter-spacing:-0.02em;">MockPilot</p>
+              <p style="font-family:'Inter',sans-serif;font-size:0.68rem;color:#8A9188;
+                        margin:1px 0 0;font-weight:600;letter-spacing:0.02em;">Interview Readiness</p>
             </div>
           </div>
         </div>
         """, unsafe_allow_html=True)
 
-        current = st.session_state.get("page", "landing")
+        # ── Active-item styling: tint the button whose st-key matches page ──
+        _active_key = {
+            "quick_scan": "nav_quick_scan", "readiness_report": "nav_report",
+            "interview": "nav_interview", "feedback": "nav_feedback",
+            "landing": "nav_landing", "dashboard": "nav_dashboard", "resume": "nav_resume",
+        }.get(current)
+        if _active_key:
+            st.markdown(
+                f'<style>.st-key-{_active_key}{{}} '
+                f'div.st-key-{_active_key} button{{background:rgba(34,197,94,0.10)!important;'
+                f'color:#86EFAC!important;font-weight:600!important;}}'
+                f'div.st-key-{_active_key} button::before{{transform:translateY(-50%) scaleY(1)!important;}}'
+                f'div.st-key-{_active_key} button:hover{{background:rgba(34,197,94,0.14)!important;}}'
+                f'</style>', unsafe_allow_html=True)
 
-        # ── Primary feature
-        st.markdown('<p class="nav-section-label">⚡ Quick Mode</p>', unsafe_allow_html=True)
-
-        # Quick Scan — primary highlighted
-        is_scan = current in ("quick_scan", "readiness_report")
-        st.markdown(f'<div class="{"nav-active" if is_scan else ""}">', unsafe_allow_html=True)
-        if st.button("⚡  Quick Readiness Scan", key="nav_quick_scan", use_container_width=True):
+        # ── Quick Readiness Scan — primary CTA ─────────────────────────────────
+        if st.button(":material/bolt: Quick readiness scan", key="nav_quick_scan",
+                     use_container_width=True, type="primary"):
             st.session_state["page"] = "quick_scan"
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
         if current == "readiness_report":
-            st.markdown('<div class="nav-active">', unsafe_allow_html=True)
-            if st.button("📊  Readiness Report", key="nav_report", use_container_width=True):
+            if st.button(":material/monitoring: Readiness report", key="nav_report",
+                         use_container_width=True):
                 st.session_state["page"] = "readiness_report"
                 st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        # ── Advanced features
-        st.markdown('<p class="nav-section-label">🏆 Advanced Mode</p>', unsafe_allow_html=True)
+        # Advanced Mode section
+        st.markdown('<p class="nav-section-label">Advanced mode</p>', unsafe_allow_html=True)
 
         advanced_nav = [
-            ("🤖", "Full AI Interview",   "interview"),
-            ("📋", "Interview Feedback",  "feedback"),
+            (":material/forum:",    "Mock interviews", "interview"),
+            (":material/insights:", "Progress",        "feedback"),
         ]
         for icon, label, page_key in advanced_nav:
-            is_active = current == page_key
-            st.markdown(f'<div class="{"nav-active" if is_active else ""}">', unsafe_allow_html=True)
-            if st.button(f"{icon}  {label}", key=f"nav_{page_key}", use_container_width=True):
+            if st.button(f"{icon} {label}", key=f"nav_{page_key}", use_container_width=True):
                 st.session_state["page"] = page_key
                 st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        # ── Tools
-        st.markdown('<p class="nav-section-label">🛠 Tools</p>', unsafe_allow_html=True)
+        # Tools section
+        st.markdown('<p class="nav-section-label">Tools</p>', unsafe_allow_html=True)
 
         tools_nav = [
-            ("🏠", "Home",          "landing"),
-            ("📊", "Dashboard",     "dashboard"),
-            ("📄", "Resume Analyzer","resume"),
+            (":material/home:",            "Home",            "landing"),
+            (":material/space_dashboard:", "Dashboard",       "dashboard"),
+            (":material/description:",     "Resume analyzer", "resume"),
         ]
         for icon, label, page_key in tools_nav:
-            is_active = current == page_key
-            st.markdown(f'<div class="{"nav-active" if is_active else ""}">', unsafe_allow_html=True)
-            if st.button(f"{icon}  {label}", key=f"nav_{page_key}", use_container_width=True):
+            if st.button(f"{icon} {label}", key=f"nav_{page_key}", use_container_width=True):
                 st.session_state["page"] = page_key
                 st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        # ── Backend status
-        st.markdown("<br>", unsafe_allow_html=True)
+        # ── Start Interview CTA ───────────────────────────────────────────────
+        st.markdown("""
+        <div style="margin:1.5rem 0 0.75rem;padding:0 0.25rem;">
+          <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:1rem;"></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(":material/play_arrow: Start interview", key="nav_start_session",
+                     use_container_width=True, type="primary"):
+            st.session_state["page"] = "interview"
+            st.rerun()
+
+        # ── Backend Status ────────────────────────────────────────────────────
         backend_ok = check_backend()
         status_color = "#10B981" if backend_ok else "#EF4444"
         status_label = "Backend Online" if backend_ok else "Backend Offline"
-        st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:0.4rem;padding:0.4rem;
-                    border-top:1px solid rgba(255,255,255,0.04);margin-top:0.5rem;">
-          <div style="width:7px;height:7px;border-radius:50%;background:{status_color};
-                      {'animation:aiPulse 2s infinite;' if backend_ok else ''}"></div>
-          <p style="color:{status_color};font-size:0.7rem;margin:0;">{status_label}</p>
-        </div>""", unsafe_allow_html=True)
-
+        offline_hint = ""
         if not backend_ok:
-            st.markdown("""
-            <p style="color:#334155;font-size:0.65rem;padding:0 0.4rem;">
-              Start: <code style="color:#A855F7;">uvicorn backend.main:app --reload</code>
-            </p>""", unsafe_allow_html=True)
+            offline_hint = """
+            <p style="color:#777777;font-size:0.64rem;margin:0.35rem 0 0;line-height:1.5;">
+              Run: <code style="color:#B5B5B5;background:rgba(255,255,255,0.05);
+                                padding:1px 5px;border-radius:4px;font-size:0.62rem;">uvicorn backend.main:app --reload</code>
+            </p>"""
+        st.markdown(f"""
+        <div class="sidebar-status">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="width:6px;height:6px;border-radius:50%;background:{status_color};
+                        flex-shrink:0;box-shadow:0 0 6px {status_color}80;"></div>
+            <p style="font-family:'Inter',sans-serif;color:{status_color};
+                      font-size:0.68rem;font-weight:700;letter-spacing:0.03em;margin:0;">{status_label}</p>
+          </div>
+          {offline_hint}
+        </div>""", unsafe_allow_html=True)
 
 
 # ── Page Router ───────────────────────────────────────────────────────────────
@@ -197,7 +199,8 @@ def main():
         feedback.render()
     elif page == "resume":
         resume_analyzer.render()
-
+    elif page == "auth":
+        auth.render()
     else:
         landing.render()
 

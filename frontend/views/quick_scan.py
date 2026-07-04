@@ -5,38 +5,76 @@ MockPilot AI — Quick Readiness Scan (3-Step Flow)
 import streamlit as st
 import requests as req
 import time
-from frontend.components.ui_components import inject_css
-from frontend.api_client import start_quick_scan, complete_quick_scan, upload_resume
-from backend.services.resume_service import extract_text, extract_skills, detect_roles, ats_analysis
-import tempfile, os
+from frontend.components.ui_components import inject_css, html_escape
+from frontend.api_client import start_quick_scan, complete_quick_scan, upload_resume, BACKEND
 
-BACKEND = "http://localhost:8000"
+
+# ── Local resume text extraction (no backend dependency) ─────────────────────
+def _extract_text_local(file_bytes: bytes, filename: str) -> str:
+    """Extract plain text from PDF, DOCX, or TXT without importing backend modules."""
+    ext = filename.lower().split('.')[-1]
+    try:
+        if ext == 'pdf':
+            try:
+                import fitz  # PyMuPDF
+                doc = fitz.open(stream=file_bytes, filetype='pdf')
+                return '\n'.join(page.get_text() for page in doc)
+            except ImportError:
+                try:
+                    import pdfplumber
+                    import io
+                    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                        return '\n'.join(p.extract_text() or '' for p in pdf.pages)
+                except ImportError:
+                    pass
+        elif ext == 'docx':
+            try:
+                from docx import Document
+                import io
+                doc = Document(io.BytesIO(file_bytes))
+                return '\n'.join(p.text for p in doc.paragraphs)
+            except ImportError:
+                pass
+        elif ext == 'txt':
+            return file_bytes.decode('utf-8', errors='ignore')
+    except Exception:
+        pass
+    return ''
+
+
+def _analyze_resume_via_api(file_bytes: bytes, filename: str, token: str) -> dict:
+    """Upload resume to backend for ATS analysis; returns {ats_score, skills, missing}."""
+    try:
+        r = req.post(
+            f"{BACKEND}/api/resume/upload",
+            files={"file": (filename, file_bytes, "application/octet-stream")},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
+        )
+        if r.ok:
+            data = r.json()
+            return {
+                "ats_score": data.get("ats_score", 0),
+                "skills": data.get("skills", {}),
+                "missing": data.get("missing_keywords", []),
+            }
+    except Exception:
+        pass
+    return {"ats_score": 0, "skills": {}, "missing": []}
 
 SCAN_CSS = """
 <style>
-.scan-step-bar {
-  display:flex;gap:0;margin-bottom:2.5rem;
-}
-.scan-step {
-  flex:1;padding:0.75rem 1rem;text-align:center;font-size:0.75rem;font-weight:700;
-  letter-spacing:0.5px;color:#475569;border-bottom:2px solid rgba(255,255,255,0.06);
-  text-transform:uppercase;transition:all 0.3s;
-}
-.scan-step.active {
-  color:#A855F7;border-bottom:2px solid #A855F7;
-}
-.scan-step.done {
-  color:#10B981;border-bottom:2px solid #10B981;
-}
+/* All scan-specific styles now live in main.css as stitch-* classes.
+   Keeping this for minimal local overrides. */
 .upload-zone {
-  border:2px dashed rgba(168,85,247,0.35);border-radius:20px;
+  border:2px dashed rgba(22,163,74,0.35);border-radius:20px;
   padding:2.5rem;text-align:center;
-  background:rgba(124,58,237,0.04);
+  background:rgba(34,197,94,0.04);
   transition:all 0.3s;cursor:pointer;
 }
 .upload-zone:hover {
-  border-color:rgba(168,85,247,0.7);
-  background:rgba(124,58,237,0.08);
+  border-color:rgba(22,163,74,0.7);
+  background:rgba(34,197,94,0.08);
 }
 .ats-ring-wrap {
   display:flex;flex-direction:column;align-items:center;
@@ -44,26 +82,21 @@ SCAN_CSS = """
 }
 .skill-badge {
   display:inline-flex;align-items:center;
-  background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);
-  border-radius:99px;padding:3px 12px;font-size:0.75rem;color:#A855F7;
-  font-weight:600;margin:3px;
+  background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
+  border-radius:99px;padding:3px 14px;font-size:0.72rem;color:#d2bbff;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;margin:3px;
+  letter-spacing:0.03em;
 }
 .skill-badge.cyan {
-  background:rgba(34,211,238,0.1);border-color:rgba(34,211,238,0.3);color:#22D3EE;
+  background:rgba(93,230,255,0.1);border-color:rgba(93,230,255,0.3);color:#5de6ff;
 }
-.q-card {
-  background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);
-  border-radius:18px;padding:1.5rem;margin-bottom:1.2rem;
-  border-left:4px solid #A855F7;
-}
-.q-card.q2 { border-left-color:#22D3EE; background:rgba(34,211,238,0.06); border-color:rgba(34,211,238,0.2);}
 .mode-tab {
   display:inline-flex;align-items:center;gap:0.4rem;padding:6px 18px;
   border-radius:99px;font-size:0.82rem;font-weight:600;cursor:pointer;
   transition:all 0.2s;border:1px solid rgba(255,255,255,0.1);color:#64748B;
 }
 .mode-tab.active {
-  background:rgba(124,58,237,0.2);border-color:rgba(168,85,247,0.5);color:#A855F7;
+  background:rgba(34,197,94,0.2);border-color:rgba(22,163,74,0.5);color:#d2bbff;
 }
 </style>
 """
@@ -143,16 +176,16 @@ def render():
     st.markdown("""
     <div style="text-align:center;padding:1.5rem 0 0.5rem;">
       <div style="display:inline-flex;align-items:center;gap:0.5rem;
-           background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);
+           background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
            border-radius:99px;padding:4px 18px;margin-bottom:1rem;">
-        <span style="width:7px;height:7px;border-radius:50%;background:#A855F7;
+        <span style="width:7px;height:7px;border-radius:50%;background:#16A34A;
                      animation:aiPulse 2s infinite;display:inline-block;"></span>
-        <span style="color:#A855F7;font-size:0.75rem;font-weight:700;letter-spacing:0.5px;">
+        <span style="color:#16A34A;font-size:0.75rem;font-weight:700;letter-spacing:0.5px;">
           ⚡ QUICK READINESS SCAN — UNDER 2 MINUTES
         </span>
       </div>
       <h1 style="font-size:2.2rem;font-weight:900;margin:0 0 0.4rem;
-                 background:linear-gradient(135deg,#F1F5F9 30%,#A855F7 65%,#22D3EE);
+                 background:linear-gradient(135deg,#FFFFFF 30%,#16A34A 65%,#4ADE80);
                  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
         Know Your Interview Readiness
       </h1>
@@ -168,12 +201,12 @@ def render():
         ("2", "Role Selection", step > 2),
         ("3", "Quick Interview", step > 3),
     ]
-    bar_html = '<div class="scan-step-bar">'
+    bar_html = '<div class="stitch-step-bar">'
     for num, label, done in steps_info:
         cur = (int(num) == step)
         cls = "done" if done else ("active" if cur else "")
         icon = "✓" if done else num
-        bar_html += f'<div class="scan-step {cls}">{icon} &nbsp;{label}</div>'
+        bar_html += f'<div class="stitch-step {cls}">{icon} &nbsp;{label}</div>'
     bar_html += "</div>"
     st.markdown(bar_html, unsafe_allow_html=True)
 
@@ -181,7 +214,7 @@ def render():
     # STEP 1: Resume Upload
     # ─────────────────────────────────────────────
     if step == 1:
-        st.markdown('<p style="color:#94A3B8;font-size:0.9rem;margin-bottom:1rem;">Upload your resume for ATS analysis and personalized questions (optional but recommended).</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#B5B5B5;font-size:0.9rem;margin-bottom:1rem;">Upload your resume for ATS analysis and personalized questions (optional but recommended).</p>', unsafe_allow_html=True)
 
         uploaded = st.file_uploader(
             "Drop your resume here (PDF / DOCX / TXT)",
@@ -192,23 +225,25 @@ def render():
         st.markdown("""
         <div class="upload-zone">
           <div style="font-size:2.5rem;margin-bottom:0.5rem;">📄</div>
-          <p style="color:#A855F7;font-weight:700;margin:0 0 0.3rem;">Drag & drop your resume</p>
+          <p style="color:#16A34A;font-weight:700;margin:0 0 0.3rem;">Drag & drop your resume</p>
           <p style="color:#64748B;font-size:0.82rem;margin:0;">PDF, DOCX, or TXT · Max 10MB</p>
         </div>""", unsafe_allow_html=True)
 
         if uploaded:
-            with st.spinner("🔍 Analyzing your resume with AI..."):
-                suffix = f".{uploaded.name.split('.')[-1]}"
-                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                    tmp.write(uploaded.read())
-                    tmp_path = tmp.name
-                try:
-                    raw_text = extract_text(tmp_path)
-                    skills   = extract_skills(raw_text)
-                    ats      = ats_analysis(raw_text)
-                    os.unlink(tmp_path)
-                except Exception as e:
-                    raw_text, skills, ats = "", {}, {"ats_score": 0, "matched": [], "missing": [], "suggestions": []}
+            with st.spinner("Analyzing your resume…"):
+                file_bytes = uploaded.read()
+                token = st.session_state.get("token", "")
+                # Try backend API for full analysis
+                api_result = _analyze_resume_via_api(file_bytes, uploaded.name, token)
+                if api_result["ats_score"] > 0:
+                    raw_text = _extract_text_local(file_bytes, uploaded.name)
+                    skills = api_result["skills"]
+                    ats = {"ats_score": api_result["ats_score"], "missing": api_result["missing"]}
+                else:
+                    # Fallback: local text extraction only, no ATS score
+                    raw_text = _extract_text_local(file_bytes, uploaded.name)
+                    skills = {}
+                    ats = {"ats_score": 0, "missing": []}
 
             st.session_state["scan_resume_text"] = raw_text
             st.session_state["scan_ats"]         = ats.get("ats_score", 0)
@@ -220,18 +255,18 @@ def render():
             with col_ring:
                 st.markdown(_ats_ring(ats.get("ats_score", 0)), unsafe_allow_html=True)
             with col_info:
-                st.markdown('<p style="color:#F1F5F9;font-weight:700;margin:0 0 0.5rem;">Detected Skills</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFFFF;font-weight:700;margin:0 0 0.5rem;">Detected Skills</p>', unsafe_allow_html=True)
                 badges_html = ""
                 for cat, kws in skills.items():
                     for kw in kws[:4]:
-                        badges_html += f'<span class="skill-badge">{kw}</span>'
+                        badges_html += f'<span class="skill-badge">{html_escape(kw)}</span>'
                 if not badges_html:
-                    badges_html = '<span style="color:#475569;font-size:0.83rem;">No skills detected — try a more detailed resume.</span>'
+                    badges_html = '<span style="color:#777777;font-size:0.83rem;">No skills detected — try a more detailed resume.</span>'
                 st.markdown(badges_html, unsafe_allow_html=True)
 
                 if ats.get("missing"):
                     st.markdown('<p style="color:#F59E0B;font-size:0.78rem;margin:0.6rem 0 0.3rem;font-weight:600;">Missing ATS Keywords</p>', unsafe_allow_html=True)
-                    miss_html = "".join(f'<span class="skill-badge cyan">{k}</span>' for k in ats["missing"][:5])
+                    miss_html = "".join(f'<span class="skill-badge cyan">{html_escape(k)}</span>' for k in ats["missing"][:5])
                     st.markdown(miss_html, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -249,7 +284,7 @@ def render():
     # STEP 2: Role Selection
     # ─────────────────────────────────────────────
     elif step == 2:
-        st.markdown('<p style="color:#94A3B8;font-size:0.9rem;margin-bottom:1.5rem;">Select the role you are targeting. This personalizes both questions to your specific career goal.</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#B5B5B5;font-size:0.9rem;margin-bottom:1.5rem;">Select the role you are targeting. This personalizes both questions to your specific career goal.</p>', unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -274,12 +309,12 @@ def render():
             "Mixed Interview":   "2 mixed questions — one technical/domain-specific, one behavioral/situational for full-spectrum coverage.",
         }.get(itype, "2 AI-generated questions tailored to your role and interview type.")
         st.markdown(f"""
-        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);
                     border-radius:16px;padding:1rem 1.5rem;margin-top:1rem;">
-          <p style="color:#A855F7;font-weight:700;font-size:0.88rem;margin:0 0 0.4rem;">What happens next?</p>
+          <p style="color:#16A34A;font-weight:700;font-size:0.88rem;margin:0 0 0.4rem;">What happens next?</p>
           <p style="color:#64748B;font-size:0.82rem;margin:0;line-height:1.6;">
             AI will generate {type_desc}
-            Answer by <strong style="color:#94A3B8;">typing or voice</strong>. Evaluation takes ~30 seconds.
+            Answer by <strong style="color:#B5B5B5;">typing or voice</strong>. Evaluation takes ~30 seconds.
           </p>
         </div>""", unsafe_allow_html=True)
 
@@ -294,7 +329,7 @@ def render():
                 st.session_state["scan_role"]  = role
                 st.session_state["scan_level"] = level
                 st.session_state["scan_type"]  = itype
-                with st.spinner("⚡ AI generating your personalized questions..."):
+                with st.spinner("Generating personalized questions…"):
                     result = start_quick_scan(
                         role=role,
                         experience_level=level,
@@ -320,32 +355,33 @@ def render():
         token = st.session_state.get("token", "")
 
         # Badge colors by type
-        badge_color = "#A855F7" if scan_type == "Technical" else "#22D3EE"
-        badge_bg    = "rgba(168,85,247,0.18)" if scan_type == "Technical" else "rgba(34,211,238,0.12)"
+        badge_color = "#16A34A" if scan_type == "Technical" else "#4ADE80"
+        badge_bg    = "rgba(22,163,74,0.18)" if scan_type == "Technical" else "rgba(74,222,128,0.12)"
 
         st.markdown(f"""
-        <div style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);
+        <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.2);
                     border-radius:12px;padding:0.7rem 1.2rem;margin-bottom:1.5rem;
                     display:flex;align-items:center;gap:0.6rem;">
           <span style="font-size:1.1rem;">🎯</span>
-          <span style="color:#94A3B8;font-size:0.85rem;">
-            <strong style="color:#A855F7;">{st.session_state['scan_role']}</strong> ·
-            {st.session_state['scan_level']} · {scan_type}
+          <span style="color:#B5B5B5;font-size:0.85rem;">
+            <strong style="color:#16A34A;">{html_escape(st.session_state['scan_role'])}</strong> ·
+            {html_escape(st.session_state['scan_level'])} · {html_escape(scan_type)}
           </span>
           <span style="margin-left:auto;color:#64748B;font-size:0.75rem;">2 questions · ~90 seconds</span>
         </div>""", unsafe_allow_html=True)
 
         # ── Question 1 ─────────────────────────────────────────────────────
         st.markdown(f"""
-        <div class="q-card">
+        <div class="stitch-q-card">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
             <span style="background:{badge_bg};color:{badge_color};border-radius:99px;
-                         padding:2px 12px;font-size:0.72rem;font-weight:700;">
-              Q1 — {scan_type}
+                         padding:2px 14px;font-size:0.72rem;font-weight:700;
+                         font-family:'Space Grotesk',sans-serif;letter-spacing:0.05em;">
+              Q1 — {html_escape(scan_type)}
             </span>
           </div>
-          <p style="color:#F1F5F9;font-size:1.05rem;font-weight:500;margin:0;line-height:1.65;">
-            {q1.get('text', '')}
+          <p style="color:#e3e0f3;font-size:1.05rem;font-weight:500;margin:0;line-height:1.65;">
+            {html_escape(q1.get('text', ''))}
           </p>
         </div>""", unsafe_allow_html=True)
 
@@ -367,7 +403,7 @@ def render():
                 c_t1, c_r1 = st.columns([2, 1])
                 with c_t1:
                     if st.button("🔊 Transcribe Q1 Answer", key="q1_transcribe", use_container_width=True, type="primary"):
-                        with st.spinner("Transcribing with Whisper..."):
+                        with st.spinner("Transcribing your response…"):
                             try:
                                 audio1.seek(0)
                                 ab1 = audio1.read()
@@ -408,22 +444,22 @@ def render():
                 st.session_state["scan_q1_ans"]    = edited_q1
                 st.session_state["scan_q1_method"] = "voice"
             elif audio1 is None:
-                st.markdown('<p style="color:#475569;font-size:0.8rem;text-align:center;padding:0.5rem 0;">Record above then click Transcribe</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#777777;font-size:0.8rem;text-align:center;padding:0.5rem 0;">Record above then click Transcribe</p>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ── Question 2 ─────────────────────────────────────────────────────
-        q2_card_cls = "q-card" if scan_type == "Technical" else "q-card q2"
         st.markdown(f"""
-        <div class="{q2_card_cls}">
+        <div class="stitch-q-card secondary">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
             <span style="background:{badge_bg};color:{badge_color};border-radius:99px;
-                         padding:2px 12px;font-size:0.72rem;font-weight:700;">
-              Q2 — {scan_type}
+                         padding:2px 14px;font-size:0.72rem;font-weight:700;
+                         font-family:'Space Grotesk',sans-serif;letter-spacing:0.05em;">
+              Q2 — {html_escape(scan_type)}
             </span>
           </div>
-          <p style="color:#F1F5F9;font-size:1.05rem;font-weight:500;margin:0;line-height:1.65;">
-            {q2.get('text', '')}
+          <p style="color:#e3e0f3;font-size:1.05rem;font-weight:500;margin:0;line-height:1.65;">
+            {html_escape(q2.get('text', ''))}
           </p>
         </div>""", unsafe_allow_html=True)
 
@@ -445,7 +481,7 @@ def render():
                 c_t2, c_r2 = st.columns([2, 1])
                 with c_t2:
                     if st.button("🔊 Transcribe Q2 Answer", key="q2_transcribe", use_container_width=True, type="primary"):
-                        with st.spinner("Transcribing with Whisper..."):
+                        with st.spinner("Transcribing your response…"):
                             try:
                                 audio2.seek(0)
                                 ab2 = audio2.read()
@@ -486,7 +522,7 @@ def render():
                 st.session_state["scan_q2_ans"]    = edited_q2
                 st.session_state["scan_q2_method"] = "voice"
             elif audio2 is None:
-                st.markdown('<p style="color:#475569;font-size:0.8rem;text-align:center;padding:0.5rem 0;">Record above then click Transcribe</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#777777;font-size:0.8rem;text-align:center;padding:0.5rem 0;">Record above then click Transcribe</p>', unsafe_allow_html=True)
 
         # ── Submit ──────────────────────────────────────────────────────────
         st.markdown("<br>", unsafe_allow_html=True)
@@ -502,7 +538,7 @@ def render():
                 if not final_q1 or not final_q2:
                     st.warning("⚠️ Please answer both questions (type or voice) before submitting.")
                 else:
-                    with st.spinner("🤖 AI is evaluating your answers and generating your readiness report..."):
+                    with st.spinner("Building your readiness report…"):
                         report = complete_quick_scan(
                             session_id=st.session_state["scan_session"],
                             q1_id=q1["id"],

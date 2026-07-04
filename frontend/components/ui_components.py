@@ -4,61 +4,75 @@ Inject CSS, render cards, score rings, charts, and HTML blocks.
 """
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
 import os
+from html import escape
 
 
 # ── CSS Injection ─────────────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
-def _load_css() -> str:
-    """Read CSS from disk once and cache it."""
+def _load_css(_mtime: float) -> str:
+    """Read CSS from disk and refresh the cache when the file changes."""
     css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "styles", "main.css")
     if os.path.exists(css_path):
-        with open(css_path) as f:
+        with open(css_path, encoding="utf-8") as f:
             return f.read()
     return ""
 
 
 def inject_css():
     """Inject the cached global stylesheet."""
-    css = _load_css()
+    css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "styles", "main.css")
+    css = _load_css(os.path.getmtime(css_path) if os.path.exists(css_path) else 0)
     if css:
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
+
+# ── Chart Theme ───────────────────────────────────────────────────────────────
+
+CHART_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, Outfit, sans-serif", color="#B5B5B5", size=11),
+    margin=dict(l=10, r=10, t=10, b=10),
+)
+
+
+def html_escape(value) -> str:
+    """Escape dynamic text before placing it inside unsafe HTML blocks."""
+    return escape("" if value is None else str(value), quote=True)
 
 
 # ── Typography ────────────────────────────────────────────────────────────────
 
 def hero_title(title: str, subtitle: str = ""):
+    title = html_escape(title)
+    subtitle = html_escape(subtitle)
     st.markdown(f"""
     <div class="fade-in-up" style="text-align:center;padding:2rem 0 1rem;">
-      <h1 style="font-size:3rem;font-weight:800;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;margin:0;line-height:1.1;">
+      <h1 style="font-family:'Outfit',sans-serif;font-size:3.5rem;font-weight:800;
+                 color:#FFFFFF;margin:0;line-height:1.05;letter-spacing:-0.045em;">
         {title}
       </h1>
-      {f'<p style="color:#94A3B8;font-size:1.15rem;margin-top:0.75rem;">{subtitle}</p>' if subtitle else ''}
+      {f'<p style="color:#B5B5B5;font-size:1.0625rem;margin-top:1rem;font-family:Inter,sans-serif;line-height:1.7;max-width:640px;margin-left:auto;margin-right:auto;">{subtitle}</p>' if subtitle else ''}
     </div>""", unsafe_allow_html=True)
 
 
 def section_header(text: str, icon: str = ""):
+    text = html_escape(text)
     st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.2rem;">
-      <span style="font-size:1.3rem;">{icon}</span>
-      <h2 style="font-size:1.4rem;font-weight:700;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;margin:0;">{text}</h2>
+    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
+      {f'<span style="font-size:1.1rem;">{icon}</span>' if icon else ''}
+      <p class="mp-section-title" style="margin:0;">{text}</p>
     </div>""", unsafe_allow_html=True)
 
 
-def badge(text: str, color: str = "#7C3AED"):
+def badge(text: str, color: str = "#22C55E"):
+    text = html_escape(text)
     st.markdown(f"""
-    <span style="background:{color}22;color:{color};border:1px solid {color}44;
-                 border-radius:99px;padding:2px 12px;font-size:0.78rem;font-weight:600;">
+    <span style="background:{color}18;color:{color};border:1px solid {color}35;
+                 border-radius:99px;padding:3px 12px;font-size:0.72rem;font-weight:700;
+                 font-family:'Inter',sans-serif;letter-spacing:0.04em;">
       {text}
     </span>""", unsafe_allow_html=True)
 
@@ -66,212 +80,286 @@ def badge(text: str, color: str = "#7C3AED"):
 # ── Cards ─────────────────────────────────────────────────────────────────────
 
 def metric_card(label: str, value: str, delta: str = "", icon: str = ""):
+    label = html_escape(label)
+    value = html_escape(value)
+    delta = html_escape(delta)
     delta_html = ""
     if delta:
-        color = "#10B981" if not delta.startswith("-") else "#EF4444"
-        arrow = "↑" if not delta.startswith("-") else "↓"
-        delta_html = f'<p style="color:{color};font-size:0.8rem;margin:4px 0 0;">{arrow} {delta}</p>'
+        color  = "#10B981" if not delta.startswith("-") else "#EF4444"
+        arrow  = "up" if not delta.startswith("-") else "down"
+        delta_html = f'<div class="kpi-trend {arrow}" style="margin-top:6px;">{delta}</div>'
     st.markdown(f"""
-    <div class="glass-card" style="text-align:center;">
-      <div style="font-size:1.8rem;">{icon}</div>
-      <p style="color:#94A3B8;font-size:0.8rem;margin:6px 0 4px;font-weight:500;
-                text-transform:uppercase;letter-spacing:0.5px;">{label}</p>
-      <h3 style="font-size:1.9rem;font-weight:800;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;margin:0;">{value}</h3>
+    <div class="kpi-card">
+      {f'<div class="kpi-icon" style="background:rgba(34,197,94,0.1);color:#86EFAC;">{icon}</div>' if icon else ''}
+      <div class="kpi-num">{value}</div>
+      <div class="kpi-lbl">{label}</div>
       {delta_html}
     </div>""", unsafe_allow_html=True)
 
 
 def feature_card(icon: str, title: str, desc: str):
+    title = html_escape(title)
+    desc = html_escape(desc)
     st.markdown(f"""
-    <div class="glass-card fade-in-up"
-         style="border-top:3px solid #7C3AED;">
-      <div style="font-size:2.2rem;margin-bottom:0.6rem;">{icon}</div>
-      <h3 style="font-size:1.05rem;font-weight:700;color:#F1F5F9;margin:0 0 0.5rem;">{title}</h3>
-      <p style="color:#94A3B8;font-size:0.88rem;margin:0;line-height:1.6;">{desc}</p>
+    <div class="stitch-feat-card">
+      <div class="stitch-feat-icon" style="background:rgba(34,197,94,0.1);color:#86EFAC;">
+        {icon}
+      </div>
+      <h3 style="font-family:'Outfit',sans-serif;font-size:1.05rem;font-weight:700;
+                 color:#FFFFFF;margin:0 0 0.5rem;">{title}</h3>
+      <p style="color:#B5B5B5;font-size:0.875rem;margin:0;line-height:1.7;">{desc}</p>
     </div>""", unsafe_allow_html=True)
 
 
-def score_card(label: str, score: float, color: str = "#7C3AED"):
-    pct = max(0, min(100, score))
+def score_card(label: str, score: float, color: str = "#22C55E"):
+    label = html_escape(label)
+    pct  = max(0, min(100, score))
+    circ = 2 * 3.14159 * 36
     st.markdown(f"""
-    <div class="glass-card" style="text-align:center;">
-      <p style="color:#94A3B8;font-size:0.78rem;margin:0 0 0.5rem;
-                text-transform:uppercase;letter-spacing:0.5px;">{label}</p>
+    <div class="glass-card" style="text-align:center;padding:1.25rem;">
+      <p class="kpi-lbl" style="margin:0 0 0.75rem;">{label}</p>
       <div style="position:relative;display:inline-block;">
         <svg width="90" height="90" viewBox="0 0 90 90">
-          <circle cx="45" cy="45" r="36" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-          <circle cx="45" cy="45" r="36" fill="none" stroke="{color}" stroke-width="8"
-                  stroke-dasharray="{2*3.14159*36}" stroke-dashoffset="{2*3.14159*36*(1-pct/100)}"
+          <circle cx="45" cy="45" r="36" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="7"/>
+          <circle cx="45" cy="45" r="36" fill="none" stroke="{color}" stroke-width="7"
+                  stroke-dasharray="{circ:.1f}" stroke-dashoffset="{circ*(1-pct/100):.1f}"
                   stroke-linecap="round" transform="rotate(-90 45 45)"
-                  style="transition:stroke-dashoffset 1s ease;"/>
+                  style="transition:stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1);
+                         filter:drop-shadow(0 0 6px {color}80);"/>
         </svg>
         <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                     font-size:1.1rem;font-weight:800;color:{color};">{pct:.0f}</span>
+                     font-family:'Outfit',sans-serif;font-size:1.15rem;font-weight:800;
+                     color:{color};">{pct:.0f}</span>
       </div>
     </div>""", unsafe_allow_html=True)
 
 
-def info_card(title: str, content: str, icon: str = "💡", border_color: str = "#7C3AED"):
+def info_card(title: str, content: str, icon: str = "💡", border_color: str = "#22C55E"):
+    title = html_escape(title)
+    content = html_escape(content)
     st.markdown(f"""
-    <div class="glass-card" style="border-left:3px solid {border_color};">
+    <div class="glass-card" style="border-left:2px solid {border_color};">
       <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
-        <span style="font-size:1.2rem;">{icon}</span>
-        <h4 style="font-size:0.95rem;font-weight:700;color:#F1F5F9;margin:0;">{title}</h4>
+        <span style="font-size:1.1rem;">{icon}</span>
+        <h4 style="font-family:'Inter',sans-serif;font-size:0.9rem;font-weight:600;
+                   color:#FFFFFF;margin:0;">{title}</h4>
       </div>
-      <p style="color:#CBD5E1;font-size:0.88rem;margin:0;line-height:1.65;">{content}</p>
+      <p style="color:#B5B5B5;font-size:0.85rem;margin:0;line-height:1.7;">{content}</p>
     </div>""", unsafe_allow_html=True)
 
 
-def list_card(title: str, items: list, icon: str = "✅", color: str = "#10B981"):
+def list_card(title: str, items: list, icon: str = "checkmark", color: str = "#10B981"):
+    title = html_escape(title)
+    icon_char = "✓" if icon in ("checkmark", "✅") else icon
     items_html = "".join([
-        f'<li style="color:#CBD5E1;font-size:0.88rem;margin-bottom:0.35rem;">'
-        f'<span style="color:{color};">{icon}</span> {item}</li>'
+        f'<li style="color:#B5B5B5;font-size:0.84rem;margin-bottom:0.4rem;'
+        f'display:flex;align-items:flex-start;gap:6px;">'
+        f'<span style="color:{color};flex-shrink:0;margin-top:2px;">{icon_char}</span>'
+        f'<span>{html_escape(item)}</span></li>'
         for item in items
     ])
     st.markdown(f"""
     <div class="glass-card">
-      <h4 style="font-size:0.95rem;font-weight:700;color:#F1F5F9;margin:0 0 0.8rem;">{title}</h4>
-      <ul style="margin:0;padding-left:0;list-style:none;">{items_html}</ul>
+      <p style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:700;
+                text-transform:uppercase;letter-spacing:0.08em;color:#777777;margin:0 0 0.75rem;">
+        {title}
+      </p>
+      <ul style="margin:0;padding:0;list-style:none;">{items_html}</ul>
     </div>""", unsafe_allow_html=True)
 
 
+def skeleton_loader(rows: int = 3, card_height: int = 80):
+    """Display shimmer skeleton loading placeholders."""
+    for _ in range(rows):
+        st.markdown(
+            f'<div class="skeleton" style="height:{card_height}px;margin-bottom:0.75rem;"></div>',
+            unsafe_allow_html=True
+        )
+
+
+def empty_state(
+    icon: str = "🎯",
+    title: str = "Nothing here yet",
+    desc: str = "",
+    cta_label: str = "",
+    cta_page: str = "",
+):
+    """Premium empty state component with optional CTA."""
+    title = html_escape(title)
+    desc = html_escape(desc)
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(34,197,94,0.05),rgba(22,163,74,0.03));
+                border:1px dashed rgba(34,197,94,0.2);border-radius:24px;
+                padding:3rem 2rem;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:0.75rem;
+                  filter:drop-shadow(0 0 12px rgba(34,197,94,0.3));">{icon}</div>
+      <h3 style="font-family:'Outfit',sans-serif;color:#FFFFFF;font-weight:800;
+                 font-size:1.2rem;margin:0 0 0.5rem;letter-spacing:-0.02em;">{title}</h3>
+      {f'<p style="color:#777777;font-size:0.875rem;margin:0;font-family:Inter,sans-serif;line-height:1.7;">{desc}</p>' if desc else ''}
+    </div>""", unsafe_allow_html=True)
+    if cta_label and cta_page:
+        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+        if st.button(cta_label, use_container_width=True):
+            st.session_state["page"] = cta_page
+            st.rerun()
+
+
 # ── Charts ────────────────────────────────────────────────────────────────────
-
-CHART_LAYOUT = dict(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Outfit, Inter, sans-serif", color="#94A3B8"),
-    margin=dict(l=10, r=10, t=30, b=10),
-)
-
 
 def radar_chart(categories: list, values: list, title: str = "Skill Breakdown"):
     fig = go.Figure(go.Scatterpolar(
         r=values + [values[0]],
         theta=categories + [categories[0]],
         fill='toself',
-        line=dict(color="#A855F7", width=2),
-        fillcolor='rgba(124,58,237,0.18)',
-        marker=dict(color="#A855F7", size=6),
+        line=dict(color="#22C55E", width=2),
+        fillcolor='rgba(34,197,94,0.1)',
+        marker=dict(color="#86EFAC", size=5, line=dict(color="#22C55E", width=1.5)),
     ))
     fig.update_layout(
         **CHART_LAYOUT,
-        title=dict(text=title, font=dict(size=14, color="#F1F5F9")),
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
-            radialaxis=dict(visible=True, range=[0, 100],
-                            gridcolor="rgba(255,255,255,0.06)",
-                            color="#475569"),
-            angularaxis=dict(gridcolor="rgba(255,255,255,0.06)", color="#94A3B8"),
+            radialaxis=dict(
+                visible=True, range=[0, 100],
+                gridcolor="rgba(255,255,255,0.05)",
+                tickfont=dict(size=9, color="#777777"),
+                linecolor="rgba(255,255,255,0.05)",
+            ),
+            angularaxis=dict(
+                gridcolor="rgba(255,255,255,0.05)",
+                tickfont=dict(size=10, color="#B5B5B5"),
+                linecolor="rgba(255,255,255,0.05)",
+            ),
         ),
+        showlegend=False,
+        height=280,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def line_chart(dates: list, scores: list, title: str = "Score Progress"):
-    fig = go.Figure(go.Scatter(
-        x=dates, y=scores, mode='lines+markers',
-        line=dict(color="#A855F7", width=3, shape="spline"),
-        marker=dict(color="#22D3EE", size=8, line=dict(color="#A855F7", width=2)),
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=scores,
+        mode='lines+markers',
+        line=dict(color="#22C55E", width=2.5, shape="spline"),
+        marker=dict(color="#86EFAC", size=7, line=dict(color="#22C55E", width=1.5)),
         fill='tozeroy',
-        fillcolor='rgba(124,58,237,0.08)',
+        fillcolor='rgba(34,197,94,0.07)',
+        hovertemplate='<b>%{y:.0f}</b><br>%{x}<extra></extra>',
     ))
     fig.update_layout(
         **CHART_LAYOUT,
-        title=dict(text=title, font=dict(size=14, color="#F1F5F9")),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.04)", showline=False),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", range=[0, 105]),
+        xaxis=dict(
+            gridcolor="rgba(255,255,255,0.04)", showline=False,
+            zeroline=False, tickfont=dict(size=10, color="#777777"),
+        ),
+        yaxis=dict(
+            gridcolor="rgba(255,255,255,0.04)", range=[0, 105],
+            showline=False, zeroline=False, tickfont=dict(size=10, color="#777777"),
+        ),
+        hovermode="x unified",
+        height=260,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def bar_chart(labels: list, values: list, title: str = "Scores"):
-    colors = ["#7C3AED" if v >= 75 else "#F59E0B" if v >= 50 else "#EF4444" for v in values]
+    colors = ["#22C55E" if v >= 75 else "#F59E0B" if v >= 50 else "#EF4444" for v in values]
     fig = go.Figure(go.Bar(
         x=labels, y=values,
-        marker=dict(color=colors, cornerradius=6),
+        marker=dict(color=colors, cornerradius=6, opacity=0.85),
         text=[f"{v:.0f}" for v in values],
         textposition='outside',
-        textfont=dict(color="#94A3B8", size=12),
+        textfont=dict(color="#B5B5B5", size=11),
+        hovertemplate='<b>%{y:.0f}</b><extra></extra>',
     ))
     fig.update_layout(
         **CHART_LAYOUT,
-        title=dict(text=title, font=dict(size=14, color="#F1F5F9")),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", range=[0, 115]),
+        xaxis=dict(
+            showgrid=False, zeroline=False,
+            tickfont=dict(size=10, color="#777777"),
+        ),
+        yaxis=dict(
+            gridcolor="rgba(255,255,255,0.04)", range=[0, 120],
+            zeroline=False, tickfont=dict(size=10, color="#777777"),
+        ),
+        bargap=0.25,
+        height=240,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 # ── Interview Room Components ─────────────────────────────────────────────────
 
 def ai_avatar(thinking: bool = False):
-    pulse = "pulse" if thinking else ""
-    label = "Thinking..." if thinking else "AI Interviewer"
+    label  = "Thinking..." if thinking else "AI Interviewer"
+    st_clr = "#F59E0B" if thinking else "#10B981"
+    anim   = "pulse-anim" if thinking else ""
     st.markdown(f"""
     <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;">
-      <div class="{pulse}" style="width:80px;height:80px;border-radius:50%;
-                   background:linear-gradient(135deg,#7C3AED,#22D3EE);
+      <div class="{anim}" style="width:72px;height:72px;border-radius:50%;
+                   background:var(--primary);
                    display:flex;align-items:center;justify-content:center;
-                   font-size:2rem;box-shadow:0 0 30px rgba(124,58,237,0.4);
-                   position:relative;">
-        🤖
-        <div style="position:absolute;bottom:4px;right:4px;
-                    width:14px;height:14px;border-radius:50%;
-                    background:{'#F59E0B' if thinking else '#10B981'};
-                    border:2px solid #07070F;"></div>
+                   box-shadow:0 0 0 1px rgba(34,197,94,0.30), 0 10px 28px rgba(34,197,94,0.14);position:relative;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#052e13"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/>
+          <path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>
+        </svg>
+        <div style="position:absolute;bottom:3px;right:3px;
+                    width:12px;height:12px;border-radius:50%;
+                    background:{st_clr};border:2px solid #090B09;"></div>
       </div>
-      <p style="color:#94A3B8;font-size:0.8rem;margin:0;">{label}</p>
+      <p style="color:#777777;font-size:0.75rem;margin:0;font-family:'Inter',sans-serif;
+                font-weight:500;">{label}</p>
     </div>""", unsafe_allow_html=True)
 
 
 def question_display(text: str, q_num: int, total: int):
+    text = html_escape(text)
+    pips = "".join([
+        f'<div style="width:26px;height:4px;border-radius:99px;'
+        f'background:{"#22C55E" if i < q_num else "rgba(255,255,255,0.08)"};'
+        f'box-shadow:{"0 0 6px rgba(34,197,94,0.5)" if i < q_num else "none"};"></div>'
+        for i in range(total)
+    ])
     st.markdown(f"""
-    <div class="glass-card glow-anim" style="border-top:3px solid #7C3AED;">
+    <div class="stitch-q-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-        <span style="background:rgba(124,58,237,0.2);color:#A855F7;
-                     border-radius:99px;padding:3px 14px;font-size:0.8rem;font-weight:600;
-                     border:1px solid rgba(124,58,237,0.3);">
-          Question {q_num} of {total}
-        </span>
-        <div style="height:6px;flex:1;margin:0 1rem;
-                    background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;">
-          <div style="height:100%;width:{int(q_num/total*100)}%;
-                      background:linear-gradient(90deg,#7C3AED,#22D3EE);
-                      border-radius:99px;transition:width 0.5s ease;"></div>
-        </div>
+        <span class="q-badge">Question {q_num}/{total}</span>
+        <div style="display:flex;gap:4px;align-items:center;">{pips}</div>
       </div>
-      <p style="font-size:1.15rem;font-weight:500;color:#F1F5F9;
-                line-height:1.7;margin:0;">{text}</p>
+      <p style="font-family:'Inter',sans-serif;font-size:1.1rem;font-weight:500;
+                color:#FFFFFF;line-height:1.75;margin:0;">{text}</p>
     </div>""", unsafe_allow_html=True)
 
 
 def timer_display(seconds: int):
-    mins = seconds // 60
-    secs = seconds % 60
+    mins  = seconds // 60
+    secs  = seconds % 60
     color = "#10B981" if seconds > 60 else "#F59E0B" if seconds > 30 else "#EF4444"
     st.markdown(f"""
     <div style="text-align:center;">
-      <span style="font-size:2rem;font-weight:800;color:{color};
-                   font-variant-numeric:tabular-nums;letter-spacing:2px;">
+      <span style="font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;
+                   color:{color};font-variant-numeric:tabular-nums;letter-spacing:0.04em;">
         {mins:02d}:{secs:02d}
       </span>
     </div>""", unsafe_allow_html=True)
 
 
 def mic_visualizer(active: bool = False):
+    c = "#22C55E" if active else "#777777"
     bars = "".join([
-        f'<div style="width:4px;height:{h}px;background:{"#A855F7" if active else "#475569"};'
-        f'border-radius:2px;animation:{"pulse" if active else "none"} {0.3+i*0.1:.1f}s ease-in-out infinite alternate;"></div>'
-        for i, h in enumerate([14, 22, 30, 22, 38, 22, 30, 22, 14])
+        f'<div class="waveform-bar" style="height:{h}px;background:{c};'
+        f'animation-delay:{0.1*i:.1f}s;'
+        f'{"" if active else "animation:none;"}"></div>'
+        for i, h in enumerate([10, 18, 26, 18, 34, 18, 26, 18, 10])
     ])
     st.markdown(f"""
     <div style="display:flex;align-items:center;justify-content:center;gap:4px;
-                height:50px;background:rgba(255,255,255,0.03);
-                border-radius:12px;border:1px solid rgba(255,255,255,0.07);">
+                height:50px;background:rgba(255,255,255,0.02);
+                border-radius:14px;border:1px solid rgba(255,255,255,0.06);">
       {bars}
     </div>""", unsafe_allow_html=True)
 
@@ -281,13 +369,13 @@ def mic_visualizer(active: bool = False):
 def thinking_loader(text: str = "AI is thinking..."):
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:1rem;
-                background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);
-                border-radius:12px;padding:1rem 1.5rem;">
-      <div style="width:20px;height:20px;border-radius:50%;
-                  border:3px solid transparent;
-                  border-top-color:#A855F7;
-                  animation:spin 0.8s linear infinite;"></div>
-      <p style="color:#A855F7;margin:0;font-size:0.95rem;">{text}</p>
+                background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.16);
+                border-radius:14px;padding:1rem 1.5rem;">
+      <div style="width:18px;height:18px;border-radius:50%;
+                  border:2.5px solid transparent;
+                  border-top-color:#16A34A;
+                  animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
+      <p style="color:#B5B5B5;margin:0;font-size:0.88rem;font-family:'Inter',sans-serif;">{text}</p>
     </div>""", unsafe_allow_html=True)
 
 

@@ -6,16 +6,17 @@ import streamlit as st
 import time
 import json
 import requests as req
+import os
 from frontend.components.ui_components import (
     inject_css, section_header, ai_avatar, question_display,
-    timer_display, mic_visualizer, thinking_loader
+    timer_display, mic_visualizer, thinking_loader, html_escape
 )
 from frontend.api_client import (
     start_session, get_current_question, submit_answer,
     complete_session, list_resumes
 )
 
-BACKEND = "http://localhost:8000"
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 ROLES = [
     "Software Engineer", "Data Scientist", "Product Manager", "ML Engineer",
@@ -35,33 +36,38 @@ MAX_QUESTIONS = 10
 ROOM_CSS = """
 <style>
 .focus-question {
-  background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(34,211,238,0.04));
-  border:1px solid rgba(124,58,237,0.3);
-  border-radius:24px;padding:2rem 2rem 1.5rem;
+  background:#111311;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;padding:2rem 2rem 1.75rem;
   position:relative;overflow:hidden;
-  box-shadow:0 0 60px rgba(124,58,237,0.12);
+  box-shadow:0 0 0 1px rgba(34,197,94,0.14), 0 8px 30px rgba(0,0,0,0.35);
 }
 .focus-question::before {
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,#7C3AED,#22D3EE,#7C3AED);
-  background-size:200%;animation:shimmer 3s linear infinite;
+  content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:#22C55E;border-radius:0 3px 3px 0;
 }
 .q-badge {
   display:inline-flex;align-items:center;gap:0.4rem;
-  background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);
+  background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
   border-radius:99px;padding:3px 12px;
-  font-size:0.72rem;font-weight:700;color:#A855F7;
-  letter-spacing:0.5px;margin-bottom:0.75rem;
+  font-size:0.7rem;font-weight:700;color:#16A34A;
+  letter-spacing:0.05em;margin-bottom:0.75rem;text-transform:uppercase;
 }
 .mode-badge {
   display:inline-flex;align-items:center;gap:0.4rem;
-  background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.25);
-  border-radius:99px;padding:3px 12px;font-size:0.72rem;font-weight:600;color:#22D3EE;
+  background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2);
+  border-radius:99px;padding:3px 12px;font-size:0.7rem;font-weight:700;color:#86EFAC;
 }
 .recruiter-card {
-  background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(34,211,238,0.04));
-  border:1px solid rgba(16,185,129,0.2);border-radius:20px;padding:1.3rem 1.5rem;
+  background:linear-gradient(135deg,rgba(16,185,129,0.05),rgba(22,163,74,0.03));
+  border:1px solid rgba(16,185,129,0.18);border-radius:20px;padding:1.3rem 1.5rem;
   margin-top:1rem;
+}
+.recruiter-bar {
+  height:3px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-top:4px;
+}
+.recruiter-bar-fill {
+  height:100%;background:linear-gradient(90deg,#22C55E,#16A34A);border-radius:99px;transition:width 1.2s ease;
 }
 
 /* ── AI Hero Banner ──────────────────────────────────────────────── */
@@ -80,8 +86,8 @@ ROOM_CSS = """
   100% { transform: translateX(300%) skewX(-12deg); }
 }
 @keyframes heroBadgePulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.4); }
-  50%      { box-shadow: 0 0 0 6px rgba(168,85,247,0); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(22,163,74,0); }
 }
 @keyframes heroTitleReveal {
   from { opacity:0; transform: translateY(20px); }
@@ -92,110 +98,51 @@ ROOM_CSS = """
   to   { opacity:1; transform: translateY(0) scale(1); }
 }
 @keyframes borderGlow {
-  0%,100% { border-color: rgba(124,58,237,0.35); }
-  50%      { border-color: rgba(34,211,238,0.45); }
+  0%,100% { border-color: rgba(34,197,94,0.35); }
+  50%      { border-color: rgba(74,222,128,0.45); }
 }
 @keyframes ctaPulse {
-  0%,100% { box-shadow: 0 0 30px rgba(124,58,237,0.5), 0 8px 32px rgba(124,58,237,0.3); }
-  50%      { box-shadow: 0 0 60px rgba(124,58,237,0.75), 0 16px 48px rgba(34,211,238,0.25), 0 0 0 4px rgba(168,85,247,0.15); }
+  0%,100% { box-shadow: 0 6px 20px rgba(34,197,94,0.14); }
+  50%      { box-shadow: 0 10px 30px rgba(34,197,94,0.22); }
 }
 
 .ai-hero-banner {
   position: relative;
   overflow: hidden;
-  border-radius: 28px;
-  padding: 2.4rem 2.5rem 2rem;
+  border-radius: 22px;
+  padding: 2.5rem 2.5rem 2.25rem;
   margin-bottom: 2rem;
-  background: linear-gradient(
-    135deg,
-    rgba(15, 5, 35, 0.95) 0%,
-    rgba(10, 5, 28, 0.97) 35%,
-    rgba(5, 18, 35, 0.96) 65%,
-    rgba(10, 5, 28, 0.97) 100%
-  );
-  border: 1px solid rgba(124,58,237,0.35);
-  animation: borderGlow 4s ease-in-out infinite;
-  box-shadow:
-    0 0 80px rgba(124,58,237,0.18),
-    0 0 160px rgba(34,211,238,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    inset 0 -1px 0 rgba(0,0,0,0.3);
+  background: #111311;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
 }
 
-/* Animated gradient mesh background */
+/* Single restrained emerald wash — no animated mesh */
 .ai-hero-banner::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(
-    120deg,
-    rgba(124,58,237,0.12) 0%,
-    rgba(34,211,238,0.06) 30%,
-    rgba(168,85,247,0.08) 60%,
-    rgba(34,211,238,0.10) 100%
-  );
-  background-size: 300% 300%;
-  animation: heroGradientShift 8s ease-in-out infinite;
+  background: radial-gradient(ellipse 60% 80% at 100% 0%, rgba(34,197,94,0.06), transparent 60%);
   pointer-events: none;
 }
+.ai-hero-banner::after { content: none; }
 
-/* Shimmer sweep */
-.ai-hero-banner::after {
-  content: '';
-  position: absolute; top: 0; left: 0;
-  width: 40%; height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255,255,255,0.03) 50%,
-    transparent 100%
-  );
-  animation: heroShimmer 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Top accent line */
+/* Top accent line — static, subtle */
 .hero-top-line {
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent 0%, #7C3AED 30%, #22D3EE 60%, transparent 100%);
-  background-size: 200%;
-  animation: heroGradientShift 4s linear infinite;
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34,197,94,0.5), transparent);
 }
 
-/* Floating ambient particles */
-.hero-particle {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.hero-p1 {
-  width: 140px; height: 140px; top: -30px; right: 80px;
-  background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%);
-  animation: particleFloat 7s ease-in-out infinite;
-}
-.hero-p2 {
-  width: 100px; height: 100px; bottom: -20px; right: 20%;
-  background: radial-gradient(circle, rgba(34,211,238,0.14) 0%, transparent 70%);
-  animation: particleFloat 9s 1.5s ease-in-out infinite;
-}
-.hero-p3 {
-  width: 80px; height: 80px; top: 30%; left: -20px;
-  background: radial-gradient(circle, rgba(168,85,247,0.16) 0%, transparent 70%);
-  animation: particleFloat 6s 3s ease-in-out infinite;
-}
-.hero-p4 {
-  width: 60px; height: 60px; bottom: 15px; left: 35%;
-  background: radial-gradient(circle, rgba(34,211,238,0.10) 0%, transparent 70%);
-  animation: particleFloat 8s 0.5s ease-in-out infinite;
-}
+/* Ambient particles removed for a calm, executive surface */
+.hero-particle, .hero-p1, .hero-p2, .hero-p3, .hero-p4 { display: none !important; }
 
 /* Badge */
 .hero-top-badge {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  background: rgba(124,58,237,0.15);
-  border: 1px solid rgba(168,85,247,0.35);
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(22,163,74,0.35);
   border-radius: 99px;
   padding: 5px 16px;
-  font-size: 0.72rem; font-weight: 700; color: #C084FC;
+  font-size: 0.72rem; font-weight: 700; color: #4ADE80;
   letter-spacing: 0.8px; text-transform: uppercase;
   margin-bottom: 1rem;
   animation: heroBadgePulse 2.5s ease-in-out infinite;
@@ -203,25 +150,23 @@ ROOM_CSS = """
 }
 .hero-badge-dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: #A855F7;
-  box-shadow: 0 0 6px rgba(168,85,247,0.8);
+  background: #16A34A;
+  box-shadow: 0 0 6px rgba(22,163,74,0.35);
 }
 
 /* Main title */
 .hero-main-title {
-  font-size: 2.4rem; font-weight: 900; line-height: 1.15;
+  font-size: 2.5rem; font-weight: 800; line-height: 1.1;
+  letter-spacing: -0.035em;
   margin: 0 0 0.75rem;
-  background: linear-gradient(135deg, #FFFFFF 0%, #E2D9F3 40%, #A855F7 70%, #22D3EE 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: heroTitleReveal 0.7s 0.1s ease-out both;
+  color: #FFFFFF;
+  animation: heroTitleReveal 0.6s 0.05s ease-out both;
   position: relative; z-index: 2;
-  text-shadow: none;
 }
 
 /* Subtitle */
 .hero-subtitle {
-  font-size: 1rem; color: #94A3B8; line-height: 1.7;
+  font-size: 1rem; color: #B5B5B5; line-height: 1.7;
   margin: 0 0 1.5rem; max-width: 600px;
   animation: heroTitleReveal 0.7s 0.25s ease-out both;
   position: relative; z-index: 2;
@@ -244,11 +189,11 @@ ROOM_CSS = """
   cursor: default;
 }
 .hero-pill:hover {
-  background: rgba(124,58,237,0.2);
-  border-color: rgba(168,85,247,0.5);
+  background: rgba(34,197,94,0.2);
+  border-color: rgba(22,163,74,0.5);
   color: #E2E8F0;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124,58,237,0.25);
+  box-shadow: 0 6px 20px rgba(34,197,94,0.25);
 }
 .hero-pill.p1 { animation: pillFadeIn 0.5s 0.35s ease-out both; }
 .hero-pill.p2 { animation: pillFadeIn 0.5s 0.45s ease-out both; }
@@ -271,40 +216,27 @@ ROOM_CSS = """
   background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
 }
 
-/* Preview card */
-.preview-card {
-  background: rgba(124,58,237,0.07);
-  border: 1px solid rgba(124,58,237,0.2);
-  border-radius: 14px;
-  padding: 1rem 1.4rem;
-  margin-bottom: 1.25rem;
-  position: relative; overflow: hidden;
-}
-.preview-card::before {
-  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
-  background:linear-gradient(180deg,#7C3AED,#22D3EE);
-  border-radius:3px 0 0 3px;
-}
-
 /* Enhanced CTA */
 .launch-cta-wrapper {
   position: relative;
 }
 .launch-cta-wrapper .stButton > button {
-  background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 50%, #4C1D95 100%) !important;
-  font-size: 1.05rem !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
-  padding: 0.85rem 2rem !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(168,85,247,0.5) !important;
+  background: #22C55E !important;
+  color: #052e13 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  min-height: 48px !important;
+  padding: 0.8rem 2rem !important;
+  border-radius: 14px !important;
+  border: none !important;
   animation: ctaPulse 3s ease-in-out infinite !important;
   position: relative; overflow: hidden;
 }
 .launch-cta-wrapper .stButton > button:hover {
-  transform: translateY(-4px) scale(1.02) !important;
-  box-shadow: 0 0 80px rgba(124,58,237,0.8), 0 20px 60px rgba(124,58,237,0.4) !important;
-  border-color: rgba(168,85,247,0.8) !important;
+  transform: translateY(-1px) !important;
+  background: #16A34A !important;
+  box-shadow: 0 10px 30px rgba(34,197,94,0.22) !important;
 }
 </style>
 """
@@ -393,14 +325,14 @@ def _render_setup():
 
         # Interview preview card
         st.markdown(f"""
-        <div class="preview-card">
-          <p style="color:#A855F7;font-weight:700;font-size:0.78rem;text-transform:uppercase;
+        <div class="interview-preview-box">
+          <p style="color:#16A34A;font-weight:700;font-size:0.78rem;text-transform:uppercase;
                     letter-spacing:0.5px;margin:0 0 0.5rem;">📋 Interview Preview</p>
           <p style="color:#E2E8F0;font-size:0.95rem;font-weight:600;margin:0 0 0.25rem;">
-            {role}
+            {html_escape(role)}
           </p>
-          <p style="color:#94A3B8;font-size:0.82rem;margin:0;">
-            {exp} &nbsp;·&nbsp; {itype} &nbsp;·&nbsp; Up to {MAX_QUESTIONS} adaptive AI questions
+          <p style="color:#B5B5B5;font-size:0.82rem;margin:0;">
+            {html_escape(exp)} &nbsp;·&nbsp; {html_escape(itype)} &nbsp;·&nbsp; Up to {MAX_QUESTIONS} adaptive AI questions
           </p>
         </div>
         """, unsafe_allow_html=True)
@@ -449,21 +381,21 @@ def _render_active():
     with st.sidebar:
         st.markdown(f"""
         <div style="padding:1rem 0;">
-          <p style="color:#A855F7;font-weight:700;font-size:0.85rem;margin:0 0 0.3rem;">
-            🎙️ LIVE INTERVIEW
+          <p style="color:#16A34A;font-weight:700;font-size:0.85rem;margin:0 0 0.3rem;">
+            LIVE INTERVIEW
           </p>
-          <p style="color:#F1F5F9;font-weight:600;font-size:0.95rem;margin:0;">{role}</p>
-          <p style="color:#64748B;font-size:0.8rem;margin:2px 0 0;">{itype}</p>
+          <p style="color:#FFFFFF;font-weight:600;font-size:0.95rem;margin:0;">{role}</p>
+          <p style="color:#777777;font-size:0.8rem;margin:2px 0 0;">{itype}</p>
           <hr style="border-color:rgba(255,255,255,0.08);margin:0.75rem 0;">
-          <p style="color:#94A3B8;font-size:0.8rem;margin:0;">Question</p>
-          <p style="font-size:1.8rem;font-weight:800;color:#A855F7;margin:0;">
-            {q_num}<span style="font-size:1rem;color:#64748B;">/{MAX_QUESTIONS}</span>
+          <p style="color:#B5B5B5;font-size:0.8rem;margin:0;">Question</p>
+          <p style="font-size:1.8rem;font-weight:800;color:#16A34A;margin:0;">
+            {q_num}<span style="font-size:1rem;color:#777777;">/{MAX_QUESTIONS}</span>
           </p>
         </div>""", unsafe_allow_html=True)
         st.progress(q_num / MAX_QUESTIONS)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("⏹  End Interview Early", use_container_width=True):
+        if st.button(":material/stop_circle: End interview early", use_container_width=True):
             with st.spinner("Finishing up..."):
                 complete_session(session_id)
             st.session_state["interview_stage"] = "completed"
@@ -476,11 +408,41 @@ def _render_active():
             time.sleep(0.5)
             q_data = get_current_question(session_id)
         if "error" in q_data:
-            st.error(f"❌ {q_data['error']}")
+            st.error(q_data["error"])
             return
         st.session_state["last_question"] = q_data
 
     q_data = st.session_state["last_question"]
+
+    # ── Question meta bar: progress · difficulty · category · est. time ──
+    exp = st.session_state.get("session_exp", "")
+    _diff = ("Foundational" if "Junior" in exp else "Advanced" if "Senior" in exp
+             else "Expert" if "Lead" in exp else "Intermediate")
+    _cat = (itype.split(" /")[0] if itype else "General")
+    _ICON = ('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" '
+             'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+             'style="flex-shrink:0;">{p}</svg>')
+    _p_layers = '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/>'
+    _p_gauge  = '<path d="M12 2v4"/><path d="M12 18v4"/><circle cx="12" cy="12" r="4"/>'
+    _p_tag    = '<path d="M12.5 2H20v7.5L9.5 20 2 12.5z"/><circle cx="7" cy="7" r="1"/>'
+    _p_clock  = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+    def _mchip(icon, label, value):
+        return (f'<div style="display:flex;align-items:center;gap:8px;">'
+                f'{icon}'
+                f'<div style="line-height:1.15;"><div style="font-family:Inter,sans-serif;font-size:0.6rem;'
+                f'font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#777777;">{label}</div>'
+                f'<div style="font-family:Inter,sans-serif;font-size:0.82rem;font-weight:600;color:#FFFFFF;">{value}</div>'
+                f'</div></div>')
+    _sep = '<div style="width:1px;height:26px;background:rgba(255,255,255,0.08);"></div>'
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;'
+        'background:#111311;border:1px solid rgba(255,255,255,0.08);border-radius:14px;'
+        'padding:0.85rem 1.25rem;margin-bottom:1rem;box-shadow:0 8px 30px rgba(0,0,0,0.35);">'
+        + _mchip(_ICON.format(p=_p_layers), "Progress", f"Question {q_num} of {MAX_QUESTIONS}")
+        + _sep + _mchip(_ICON.format(p=_p_gauge), "Difficulty", _diff)
+        + _sep + _mchip(_ICON.format(p=_p_tag), "Category", _cat)
+        + _sep + _mchip(_ICON.format(p=_p_clock), "Est. time", "~2 min")
+        + '</div>', unsafe_allow_html=True)
 
     # Layout
     col_avatar, col_main = st.columns([1, 4])
@@ -504,18 +466,18 @@ def _render_active():
         c_label, c_toggle = st.columns([3, 1])
         with c_label:
             st.markdown(
-                '<p style="color:#94A3B8;font-size:0.85rem;margin:0;font-weight:500;">'
-                f'{"🎙️ Voice Mode active" if voice_mode else "📝 Your Answer"}</p>',
+                '<p style="color:#B5B5B5;font-size:0.85rem;margin:0;font-weight:500;">'
+                f'{"Voice mode active" if voice_mode else "Your answer"}</p>',
                 unsafe_allow_html=True,
             )
         with c_toggle:
             if voice_mode:
-                if st.button("⌨️ Switch to Text", key=f"switch_text_{q_num}",
+                if st.button(":material/keyboard: Switch to text", key=f"switch_text_{q_num}",
                              use_container_width=True):
                     st.session_state["voice_mode"] = False
                     st.rerun()
             else:
-                if st.button("🎙️ Use Voice", key=f"switch_voice_{q_num}",
+                if st.button(":material/mic: Use voice", key=f"switch_voice_{q_num}",
                              use_container_width=True):
                     st.session_state["voice_mode"] = True
                     st.rerun()
@@ -527,7 +489,7 @@ def _render_active():
             _render_voice_tab(session_id, q_data, q_num)
         else:
             # ── Text mode: original tabs ──────────────────────────────────
-            answer_tab, voice_tab = st.tabs(["⌨️  Type Answer", "🎙️  Live Voice"])
+            answer_tab, voice_tab = st.tabs([":material/keyboard: Type answer", ":material/mic: Live voice"])
 
             with answer_tab:
                 answer = st.text_area(
@@ -539,13 +501,13 @@ def _render_active():
                 )
                 col_sub, col_skip = st.columns([3, 1])
                 with col_sub:
-                    if st.button("✅  Analyze Response", key=f"submit_{q_num}", use_container_width=True):
+                    if st.button(":material/auto_awesome: Analyze response", key=f"submit_{q_num}", use_container_width=True):
                         if not answer or len(answer.strip()) < 10:
                             st.warning("Please write a more detailed answer (at least 10 characters).")
                         else:
                             _submit_answer(session_id, q_data["id"], answer, "text")
                 with col_skip:
-                    if st.button("⏭ Skip Question", key=f"skip_{q_num}", use_container_width=True):
+                    if st.button(":material/skip_next: Skip", key=f"skip_{q_num}", use_container_width=True):
                         _submit_answer(session_id, q_data["id"], "I'll skip this question.", "text")
 
             with voice_tab:
@@ -558,7 +520,7 @@ def _render_active():
 
         next_q = feedback.get("next_question")
         if next_q and q_num < MAX_QUESTIONS:
-            if st.button("➡️  Next Question", key="next_q_btn", use_container_width=True):
+            if st.button(":material/arrow_forward: Next question", key="next_q_btn", use_container_width=True):
                 st.session_state.update({
                     "question_number":  q_num + 1,
                     "answer_submitted": False,
@@ -568,8 +530,8 @@ def _render_active():
                 })
                 st.rerun()
         else:
-            st.success("🎉 Interview complete!")
-            if st.button("📊  View Full Results", key="view_results", use_container_width=True):
+            st.success("Interview complete!")
+            if st.button(":material/assessment: View full results", key="view_results", use_container_width=True):
                 st.session_state["interview_stage"] = "completed"
                 st.rerun()
 
@@ -579,7 +541,7 @@ def _render_active():
 def _inject_question_tts(question_text: str, q_num: int):
     """Inject JS to read the question aloud via browser Speech Synthesis.
     Only fires once per question number."""
-    safe_text = question_text.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+    safe_text = json.dumps(str(question_text).replace("\n", " "))
     st.components.v1.html(f"""
 <script>
 (function(){{
@@ -588,7 +550,7 @@ def _inject_question_tts(question_text: str, q_num: int):
   sessionStorage.setItem(key, '1');
   const speak = () => {{
     if (!window.speechSynthesis) return;
-    const u = new SpeechSynthesisUtterance("{safe_text}");
+    const u = new SpeechSynthesisUtterance({safe_text});
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(x => x.lang.startsWith('en') && x.name.includes('Google'))
            || voices.find(x => x.lang.startsWith('en'));
@@ -610,14 +572,14 @@ def _render_voice_tab(session_id: int, q_data: dict, q_num: int):
 
     st.markdown("""
     <style>
-    .vc-panel{background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.2);
+    .vc-panel{background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);
               border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:0.75rem;}
     .vc-step{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem;}
-    .vc-step-num{width:22px;height:22px;border-radius:50%;background:rgba(124,58,237,0.3);
-                 color:#A855F7;font-size:0.72rem;font-weight:700;display:flex;
+    .vc-step-num{width:22px;height:22px;border-radius:50%;background:rgba(34,197,94,0.3);
+                 color:#16A34A;font-size:0.72rem;font-weight:700;display:flex;
                  align-items:center;justify-content:center;flex-shrink:0;}
-    .vc-step-txt{color:#94A3B8;font-size:0.82rem;}
-    .vc-label{color:#22D3EE;font-size:0.78rem;font-weight:600;text-transform:uppercase;
+    .vc-step-txt{color:#B5B5B5;font-size:0.82rem;}
+    .vc-label{color:#4ADE80;font-size:0.78rem;font-weight:600;text-transform:uppercase;
               letter-spacing:0.5px;margin:0.9rem 0 0.35rem;}
     </style>
     """, unsafe_allow_html=True)
@@ -638,7 +600,7 @@ def _render_voice_tab(session_id: int, q_data: dict, q_num: int):
       </div>
       <div class="vc-step">
         <div class="vc-step-num">3</div>
-        <span class="vc-step-txt">Click <strong style="color:#A855F7;">Transcribe my answer</strong> to convert speech to text</span>
+        <span class="vc-step-txt">Click <strong style="color:#16A34A;">Transcribe my answer</strong> to convert speech to text</span>
       </div>
       <div class="vc-step">
         <div class="vc-step-num">4</div>
@@ -666,7 +628,7 @@ def _render_voice_tab(session_id: int, q_data: dict, q_num: int):
                 st.rerun()
 
         if transcribe_clicked:
-            with st.spinner("🎤 Transcribing with Groq Whisper..."):
+            with st.spinner("Transcribing your response…"):
                 try:
                     # seek(0) is critical — BytesIO cursor may be non-zero
                     audio_value.seek(0)
@@ -704,9 +666,9 @@ def _render_voice_tab(session_id: int, q_data: dict, q_num: int):
 
     else:
         st.markdown("""
-        <div style="color:#475569;font-size:0.82rem;text-align:center;
+        <div style="color:#777777;font-size:0.82rem;text-align:center;
                     padding:0.6rem 0;border-top:1px solid rgba(255,255,255,0.05);margin-top:0.5rem;">
-          🎙️ Record your answer above, then click <strong style="color:#A855F7;">Transcribe</strong>
+          🎙️ Record your answer above, then click <strong style="color:#16A34A;">Transcribe</strong>
         </div>""", unsafe_allow_html=True)
 
     # ── Step 4 — Review & Submit ──────────────────────────────────
@@ -742,8 +704,9 @@ def _render_voice_tab(session_id: int, q_data: dict, q_num: int):
 
 
 
+
 def _submit_answer(session_id, question_id, answer, method):
-    with st.spinner("🤖 AI is analyzing your answer..."):
+    with st.spinner("Evaluating your answer…"):
         result = submit_answer(session_id, question_id, answer, method)
     if "error" in result:
         st.error(f"❌ {result['error']}")
@@ -771,24 +734,26 @@ def _show_inline_feedback(feedback: dict):
 
     # Main score card
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(34,211,238,0.05));
-                border:1px solid rgba(124,58,237,0.25);border-radius:24px;
+    <div style="background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(22,163,74,0.04));
+                border:1px solid rgba(34,197,94,0.22);border-radius:24px;
                 padding:1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;
-                  background:linear-gradient(90deg,{color},{color}88);"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;
+                  background:linear-gradient(90deg,transparent,{color},transparent);"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <p style="color:#A855F7;font-size:0.72rem;font-weight:700;
-                    letter-spacing:0.5px;margin:0 0 0.2rem;">AI ANALYSIS COMPLETE</p>
-          <p style="color:#F1F5F9;font-weight:800;font-size:1.1rem;margin:0;">Response Evaluated ✅</p>
+          <p style="color:#16A34A;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;
+                    text-transform:uppercase;margin:0 0 0.3rem;">AI Analysis Complete</p>
+          <p style="color:#FFFFFF;font-weight:700;font-size:1rem;margin:0;">Response Evaluated ✓</p>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:2.8rem;font-weight:900;color:{color};line-height:1;">{score:.0f}</div>
-          <div style="font-size:0.72rem;color:#64748B;">/100 · {grade}</div>
+          <div style="font-family:'Outfit',sans-serif;font-size:2.8rem;font-weight:900;
+                      color:{color};line-height:1;letter-spacing:-0.04em;">{score:.0f}</div>
+          <div style="font-size:0.68rem;color:#777777;font-family:'Inter',sans-serif;">/100 · {grade}</div>
         </div>
       </div>
-      <p style="color:#94A3B8;font-size:0.85rem;margin:0.9rem 0 0;line-height:1.65;">
-        {feedback.get('ai_feedback','')[:320]}...
+      <p style="color:#B5B5B5;font-size:0.85rem;margin:0.85rem 0 0;line-height:1.7;
+                font-family:'Inter',sans-serif;">
+        {html_escape(feedback.get('ai_feedback','')[:320])}...
       </p>
     </div>""", unsafe_allow_html=True)
 
@@ -799,12 +764,12 @@ def _show_inline_feedback(feedback: dict):
     rel   = feedback.get("relevance_score", score * 0.92)
     st.markdown(f"""
     <div class="recruiter-card">
-      <p style="color:#10B981;font-size:0.72rem;font-weight:700;
-                letter-spacing:0.5px;margin:0 0 0.9rem;">RECRUITER PERSPECTIVE</p>
+      <p style="color:#10B981;font-size:0.68rem;font-weight:700;
+                letter-spacing:0.08em;text-transform:uppercase;margin:0 0 0.85rem;">Recruiter Perspective</p>
       {''.join([
-        f'<div style="margin-bottom:0.5rem;">'
-        f'  <div style="display:flex;justify-content:space-between;">' 
-        f'    <span style="color:#94A3B8;font-size:0.78rem;">{lbl}</span>'
+        f'<div style="margin-bottom:0.55rem;">'
+        f'  <div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+        f'    <span style="color:#B5B5B5;font-size:0.78rem;font-family:Inter,sans-serif;">{lbl}</span>'
         f'    <span style="color:{"#10B981" if v>=70 else "#F59E0B"};font-size:0.78rem;font-weight:700;">{v:.0f}</span>'
         f'  </div>'
         f'  <div class="recruiter-bar">'
@@ -817,39 +782,54 @@ def _show_inline_feedback(feedback: dict):
 
 # ── Completed Screen ──────────────────────────────────────────────────────────
 
+
 def _render_completed():
-    st.markdown("""
-    <div class="fade-in-up" style="text-align:center;padding:2rem 0;">
-      <div style="font-size:4rem;margin-bottom:1rem;">🏆</div>
-      <h1 style="font-size:2.2rem;font-weight:800;
-                 background:linear-gradient(135deg,#A855F7,#22D3EE);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;margin:0;">Interview Complete!</h1>
-      <p style="color:#64748B;margin:0.5rem 0 2rem;">
-        Your detailed feedback is ready. Check the Feedback page for full analysis.
+    all_fb = st.session_state.get("all_feedback", [])
+    scores = [f.get("overall_score", 0) for f in all_fb]
+    avg    = sum(scores) / len(scores) if scores else 0
+    color  = "#10B981" if avg >= 75 else "#F59E0B" if avg >= 50 else "#EF4444"
+    grade  = "Outstanding" if avg >= 90 else "Proficient" if avg >= 80 else "Competent" if avg >= 65 else "Developing" if avg >= 50 else "Beginner"
+
+    st.markdown(f"""
+    <div class="fade-in-up" style="text-align:center;padding:2.5rem 1rem 1.5rem;">
+      <div style="width:72px;height:72px;margin:0 auto 1.25rem;border-radius:20px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);display:flex;align-items:center;justify-content:center;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div>
+      <p style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;
+                text-transform:uppercase;color:#22C55E;margin:0 0 0.5rem;">Interview Complete</p>
+      <h1 style="font-family:'Outfit',sans-serif;font-size:2.75rem;font-weight:800;margin:0 0 0.5rem;
+                 color:#FFFFFF;letter-spacing:-0.04em;">You did great.</h1>
+      <p style="color:#777777;margin:0 0 2rem;font-size:0.9rem;font-family:'Inter',sans-serif;">
+        Your comprehensive performance report is ready.
       </p>
     </div>""", unsafe_allow_html=True)
 
-    # Quick summary of all feedback
-    all_fb = st.session_state.get("all_feedback", [])
     if all_fb:
-        scores = [f.get("overall_score", 0) for f in all_fb]
-        avg    = sum(scores) / len(scores) if scores else 0
-        color  = "#10B981" if avg >= 75 else "#F59E0B" if avg >= 50 else "#EF4444"
-        st.markdown(f"""
-        <div class="glass-card" style="text-align:center;margin-bottom:1.5rem;">
-          <p style="color:#94A3B8;font-size:0.85rem;margin:0 0 0.3rem;">Your Overall Score</p>
-          <h2 style="font-size:4rem;font-weight:900;color:{color};margin:0;">{avg:.0f}</h2>
-          <p style="color:#64748B;font-size:0.85rem;margin:0;">/100</p>
-        </div>""", unsafe_allow_html=True)
+        _, card_col, _ = st.columns([1, 2, 1])
+        with card_col:
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(22,163,74,0.05));
+                        border:1px solid rgba(34,197,94,0.2);border-radius:24px;
+                        padding:2rem;text-align:center;margin-bottom:1.5rem;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:2px;
+                          background:linear-gradient(90deg,transparent,{color},transparent);"></div>
+              <p style="font-family:'Inter',sans-serif;font-size:0.68rem;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.1em;color:#777777;margin:0 0 0.5rem;">Final Score</p>
+              <div style="font-family:'Outfit',sans-serif;font-size:4.5rem;font-weight:900;
+                          color:{color};line-height:1;letter-spacing:-0.04em;margin-bottom:0.25rem;">{avg:.0f}</div>
+              <div style="font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:700;
+                          text-transform:uppercase;letter-spacing:0.08em;color:#777777;">/100 · {grade}</div>
+              <div style="margin-top:1rem;display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
+                {''.join([f"<div style='text-align:center;'><div style='font-family:Outfit,sans-serif;font-size:1.1rem;font-weight:800;color:#86EFAC;'>Q{i+1}</div><div style='font-size:0.65rem;color:#777777;font-family:Inter,sans-serif;'>{s:.0f}pts</div></div>" for i, s in enumerate(scores[:6])])}
+              </div>
+            </div>""", unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📊  Detailed Feedback", use_container_width=True):
+        if st.button(":material/assessment: View detailed report", use_container_width=True):
             st.session_state["page"] = "feedback"
             st.rerun()
     with col2:
-        if st.button("🔄  New Interview", use_container_width=True):
+        st.markdown('<div class="btn-secondary">', unsafe_allow_html=True)
+        if st.button(":material/refresh: Practice again", use_container_width=True):
             st.session_state.update({
                 "interview_stage": "setup",
                 "session_id": None,
@@ -859,3 +839,4 @@ def _render_completed():
                 "answer_submitted": False,
             })
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)

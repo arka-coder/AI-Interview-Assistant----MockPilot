@@ -18,11 +18,11 @@ def render():
         <div style="text-align:center;margin-bottom:2rem;">
           <div style="display:inline-flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
             <div style="width:42px;height:42px;border-radius:12px;
-                        background:linear-gradient(135deg,#7C3AED,#22D3EE);
+                        background:linear-gradient(135deg,#22C55E,#4ADE80);
                         display:flex;align-items:center;justify-content:center;
-                        font-size:1.3rem;box-shadow:0 0 20px rgba(124,58,237,0.4);">🤖</div>
+                        font-size:1.3rem;box-shadow:0 0 0 1px rgba(34,197,94,0.20);">🤖</div>
             <span style="font-size:1.5rem;font-weight:800;
-                         background:linear-gradient(135deg,#A855F7,#22D3EE);
+                         background:linear-gradient(135deg,#16A34A,#4ADE80);
                          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
                          background-clip:text;">MockPilot AI</span>
           </div>
@@ -37,7 +37,7 @@ def render():
         with tab_login:
             st.markdown("""
             <div class="glass-card" style="margin-top:1rem;">
-              <h3 style="font-size:1.2rem;font-weight:700;color:#F1F5F9;margin:0 0 0.3rem;">
+              <h3 style="font-size:1.2rem;font-weight:700;color:#FFFFFF;margin:0 0 0.3rem;">
                 Welcome back 👋
               </h3>
               <p style="color:#64748B;font-size:0.85rem;margin:0 0 1.5rem;">
@@ -70,7 +70,7 @@ def render():
         with tab_signup:
             st.markdown("""
             <div class="glass-card" style="margin-top:1rem;">
-              <h3 style="font-size:1.2rem;font-weight:700;color:#F1F5F9;margin:0 0 0.3rem;">
+              <h3 style="font-size:1.2rem;font-weight:700;color:#FFFFFF;margin:0 0 0.3rem;">
                 Create your account 🚀
               </h3>
               <p style="color:#64748B;font-size:0.85rem;margin:0 0 1.5rem;">
