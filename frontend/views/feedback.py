@@ -3,11 +3,11 @@ MockPilot AI — Premium Performance Analytics Page
 Based on stitch_mockpilot_premium_design_system/mockpilot_performance_analytics
 """
 import streamlit as st
-from frontend.components.ui_components import (
+from components.ui_components import (
     inject_css, score_card, radar_chart, bar_chart, list_card, info_card,
     html_escape
 )
-from frontend.api_client import get_history
+from api_client import get_history
 
 
 FEEDBACK_CSS = """

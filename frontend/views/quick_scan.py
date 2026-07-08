@@ -5,8 +5,8 @@ MockPilot AI — Quick Readiness Scan (3-Step Flow)
 import streamlit as st
 import requests as req
 import time
-from frontend.components.ui_components import inject_css, html_escape
-from frontend.api_client import start_quick_scan, complete_quick_scan, upload_resume, BACKEND
+from components.ui_components import inject_css, html_escape
+from api_client import start_quick_scan, complete_quick_scan, upload_resume, BACKEND
 
 
 # ── Local resume text extraction (no backend dependency) ─────────────────────

@@ -4,10 +4,10 @@ Executive SaaS dashboard — Linear · Stripe aesthetic
 """
 import streamlit as st
 from datetime import datetime
-from frontend.components.ui_components import (
+from components.ui_components import (
     inject_css, radar_chart, line_chart
 )
-from frontend.api_client import get_analytics, get_history, clear_all_sessions
+from api_client import get_analytics, get_history, clear_all_sessions
 
 
 DASH_CSS = """

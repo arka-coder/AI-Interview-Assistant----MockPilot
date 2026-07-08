@@ -5,7 +5,7 @@ WhatsApp-style real-time voice conversation with AI interviewer.
 import streamlit as st
 import json
 import os
-from frontend.components.ui_components import inject_css
+from components.ui_components import inject_css
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 

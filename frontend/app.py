@@ -20,11 +20,11 @@ st.set_page_config(
 )
 
 # ── Imports ───────────────────────────────────────────────────────────────────
-from frontend.components.ui_components import inject_css
-from frontend.views import landing, dashboard, interview_room, feedback, resume_analyzer
-from frontend.views import auth
-from frontend.views import quick_scan, readiness_report
-from frontend.api_client import check_backend
+from components.ui_components import inject_css
+from views import landing, dashboard, interview_room, feedback, resume_analyzer
+from views import auth
+from views import quick_scan, readiness_report
+from api_client import check_backend
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
 

@@ -4,7 +4,7 @@ MockPilot AI — Readiness Report (Cinematic Score Reveal)
 import streamlit as st
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
-from frontend.components.ui_components import inject_css, html_escape
+from components.ui_components import inject_css, html_escape
 
 REPORT_CSS = """<style>
 .rr-hero{background:linear-gradient(160deg,rgba(34,197,94,0.12) 0%,rgba(74,222,128,0.05) 100%);

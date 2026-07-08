@@ -3,7 +3,7 @@ MockPilot AI — Premium Landing Page
 Linear · Vercel · Stripe · Arc aesthetic
 """
 import streamlit as st
-from frontend.components.ui_components import inject_css
+from components.ui_components import inject_css
 
 LANDING_CSS = """
 <style>

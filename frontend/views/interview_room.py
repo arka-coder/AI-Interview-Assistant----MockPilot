@@ -7,11 +7,11 @@ import time
 import json
 import requests as req
 import os
-from frontend.components.ui_components import (
+from components.ui_components import (
     inject_css, section_header, ai_avatar, question_display,
     timer_display, mic_visualizer, thinking_loader, html_escape
 )
-from frontend.api_client import (
+from api_client import (
     start_session, get_current_question, submit_answer,
     complete_session, list_resumes
 )

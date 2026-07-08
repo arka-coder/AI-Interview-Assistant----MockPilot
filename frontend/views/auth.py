@@ -3,8 +3,8 @@ MockPilot AI — Authentication Page
 Glassmorphism login/signup with JWT support.
 """
 import streamlit as st
-from frontend.components.ui_components import inject_css
-from frontend.api_client import login, signup
+from components.ui_components import inject_css
+from api_client import login, signup
 
 
 def render():

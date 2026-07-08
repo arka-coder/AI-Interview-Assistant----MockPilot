@@ -3,11 +3,11 @@ MockPilot AI — Resume Analyzer Page
 Upload, parse, ATS score, skill extraction, personalized question generation.
 """
 import streamlit as st
-from frontend.components.ui_components import (
+from components.ui_components import (
     inject_css, section_header, info_card, list_card, html_escape
 )
-from frontend.api_client import upload_resume, list_resumes, delete_resume
-from frontend.api_client import BACKEND
+from api_client import upload_resume, list_resumes, delete_resume
+from api_client import BACKEND
 import requests
 
 
