@@ -3,6 +3,7 @@ MockPilot AI — Main Streamlit Application
 2-Minute Interview Readiness Engine · Central router.
 """
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import sys, os
 
@@ -65,29 +66,50 @@ _ensure_guest_session()
 def render_sidebar():
     inject_css()
 
-    # ── Permanently hide the sidebar collapse button so it can't be closed ──
-    # Streamlit persists sidebar state in localStorage; hiding the toggle
-    # prevents the sidebar from ever entering 'collapsed' state.
+    # ── Sidebar always-open fix ────────────────────────────────────────────────
+    # 1. CSS: hides the << collapse toggle so users can never collapse it
+    # 2. JS component: if sidebar is ALREADY collapsed (from a previous session's
+    #    localStorage), automatically clicks the expand button to reopen it.
+    #    Uses window.parent to reach the Streamlit app DOM from inside the iframe.
     st.markdown("""
     <style>
-    /* Hide the << collapse button inside the sidebar */
+    /* Hide the collapse button inside the sidebar */
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
-    /* Ensure the expand arrow (shown when collapsed) stays prominent */
-    [data-testid="stSidebarCollapsedControl"] {
-        visibility: visible !important;
-        opacity: 1 !important;
-        display: flex !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] button {
-        background: var(--primary) !important;
-        color: #052e13 !important;
-        border-radius: 0 10px 10px 0 !important;
-        width: 32px !important;
-        height: 56px !important;
-        box-shadow: 4px 0 16px rgba(34,197,94,0.25) !important;
-    }
+    /* Make the header-area open-sidebar button (used when collapsed) always visible */
+    [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
+
+    # JS: auto-expand if sidebar was collapsed by a prior localStorage write
+    components.html("""
+    <script>
+    (function() {
+      function tryExpand() {
+        try {
+          var p = window.parent.document;
+          // Streamlit shows an open-sidebar button in the header when sidebar is closed.
+          // It lives inside the header toolbar area. Try multiple known selectors.
+          var selectors = [
+            '[data-testid="stSidebarCollapsedControl"] button',
+            'button[aria-label="Open sidebar"]',
+            'button[title="Open sidebar"]',
+            '[data-testid="stBaseButton-header"]'
+          ];
+          for (var i = 0; i < selectors.length; i++) {
+            var btn = p.querySelector(selectors[i]);
+            if (btn) { btn.click(); return true; }
+          }
+        } catch(e) {}
+        return false;
+      }
+      // Poll until the expand button appears (if sidebar is collapsed) or give up
+      var n = 0;
+      var t = setInterval(function() {
+        if (tryExpand() || ++n > 25) clearInterval(t);
+      }, 120);
+    })();
+    </script>
+    """, height=0)
 
     with st.sidebar:
         current = st.session_state.get("page", "landing")
