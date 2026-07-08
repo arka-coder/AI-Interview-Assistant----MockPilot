@@ -2378,3 +2378,34 @@ button[data-testid="stBaseButton-primary"],
 .st-key-mode2_cta button {
   min-height: 46px !important;
 }
+
+/* ── Sidebar always-visible fix ─────────────────────────────────────────────
+   Streamlit saves sidebar state to localStorage. Hiding the collapse button
+   prevents the sidebar from ever being toggled off. The collapsed-control
+   (expand arrow shown when sidebar IS collapsed) is styled prominently so
+   users can always bring it back. */
+
+/* Hide the << collapse toggle inside the sidebar */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebar"] button[aria-label="Close sidebar"],
+[data-testid="stSidebar"] button[title="Collapse sidebar"] {
+  display: none !important;
+}
+
+/* Style the > expand button (shown only when sidebar is collapsed) */
+[data-testid="stSidebarCollapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+}
+[data-testid="stSidebarCollapsedControl"] button {
+  background: linear-gradient(180deg, #6BEDA1, #35D978) !important;
+  color: #041B0D !important;
+  border: none !important;
+  border-radius: 0 10px 10px 0 !important;
+  width: 32px !important;
+  min-height: 56px !important;
+  box-shadow: 4px 0 18px rgba(34,197,94,0.30) !important;
+  font-size: 1rem !important;
+}

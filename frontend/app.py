@@ -65,6 +65,30 @@ _ensure_guest_session()
 def render_sidebar():
     inject_css()
 
+    # ── Permanently hide the sidebar collapse button so it can't be closed ──
+    # Streamlit persists sidebar state in localStorage; hiding the toggle
+    # prevents the sidebar from ever entering 'collapsed' state.
+    st.markdown("""
+    <style>
+    /* Hide the << collapse button inside the sidebar */
+    [data-testid="stSidebarCollapseButton"] { display: none !important; }
+    /* Ensure the expand arrow (shown when collapsed) stays prominent */
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] button {
+        background: var(--primary) !important;
+        color: #052e13 !important;
+        border-radius: 0 10px 10px 0 !important;
+        width: 32px !important;
+        height: 56px !important;
+        box-shadow: 4px 0 16px rgba(34,197,94,0.25) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     with st.sidebar:
         current = st.session_state.get("page", "landing")
 
