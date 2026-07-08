@@ -73,27 +73,53 @@ def render_sidebar():
     #    Uses window.parent to reach the Streamlit app DOM from inside the iframe.
     st.markdown("""
     <style>
-    /* Hide the collapse button inside the sidebar */
-    [data-testid="stSidebarCollapseButton"] { display: none !important; }
-    /* Make the header-area open-sidebar button (used when collapsed) always visible */
-    [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+    /* Hide the << collapse button ONLY when inside the sidebar (scoped selector).
+       The same data-testid is used for the expand button in the header toolbar —
+       we must NOT hide that one or users can never reopen the sidebar. */
+    [data-testid="stSidebar"] [data-testid="stBaseButton-headerNoPadding"],
+    [data-testid="stSidebarCollapseButton"] {
+        display: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # JS: auto-expand if sidebar was collapsed by a prior localStorage write
+    # JS: clear any collapsed localStorage state and auto-click expand if needed.
+    # height=1 (not 0) so the iframe actually renders and the script executes.
     components.html("""
     <script>
     (function() {
+      // 1. Nuclear reset: remove the sidebar width/state cache so Streamlit
+      //    always starts from initial_sidebar_state="expanded"
+      try {
+        var ls = window.parent.localStorage;
+        // Remove all keys that Streamlit uses for sidebar state
+        ['sidebarWidth', 'stSidebarCollapsed', 'sidebar-collapsed',
+         'streamlit.sidebar.collapsed', 'sidebar_collapsed'].forEach(function(k) {
+          ls.removeItem(k);
+        });
+        // Also scan and remove any key containing 'sidebar' and 'collaps'
+        var toRemove = [];
+        for (var i = 0; i < ls.length; i++) {
+          var key = ls.key(i) || '';
+          if (key.toLowerCase().includes('sidebar') && key.toLowerCase().includes('collaps')) {
+            toRemove.push(key);
+          }
+        }
+        toRemove.forEach(function(k) { ls.removeItem(k); });
+      } catch(e) {}
+
+      // 2. Also click the expand button if sidebar is already rendered collapsed
       function tryExpand() {
         try {
           var p = window.parent.document;
-          // Streamlit shows an open-sidebar button in the header when sidebar is closed.
-          // It lives inside the header toolbar area. Try multiple known selectors.
+          // The expand button lives in the header toolbar when sidebar is collapsed.
+          // Try multiple selectors to cover different Streamlit versions.
           var selectors = [
             '[data-testid="stSidebarCollapsedControl"] button',
+            'header [data-testid="stBaseButton-headerNoPadding"]',
+            '[data-testid="stHeader"] [data-testid="stBaseButton-headerNoPadding"]',
             'button[aria-label="Open sidebar"]',
-            'button[title="Open sidebar"]',
-            '[data-testid="stBaseButton-header"]'
+            'button[title="Open sidebar"]'
           ];
           for (var i = 0; i < selectors.length; i++) {
             var btn = p.querySelector(selectors[i]);
@@ -102,14 +128,13 @@ def render_sidebar():
         } catch(e) {}
         return false;
       }
-      // Poll until the expand button appears (if sidebar is collapsed) or give up
       var n = 0;
       var t = setInterval(function() {
-        if (tryExpand() || ++n > 25) clearInterval(t);
-      }, 120);
+        if (tryExpand() || ++n > 30) clearInterval(t);
+      }, 100);
     })();
     </script>
-    """, height=0)
+    """, height=1)
 
     with st.sidebar:
         current = st.session_state.get("page", "landing")
